@@ -135,7 +135,7 @@ function fetchWithJSONP(method = 'csv') {
                 document.body.removeChild(script);
                 reject(new Error('JSONP request timed out'));
             }
-        }, 10000); // 10 second timeout
+        }, 5000); // 10 second timeout
     });
 }
 
