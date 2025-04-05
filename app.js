@@ -5,6 +5,11 @@ const urlParams = new URLSearchParams(window.location.search);
 const SHEET_ID = urlParams.get('sheet') || DEFAULT_SHEET_ID;
 const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit?gid=0#gid=0`;
 
+// Variables for auto-update feature
+let autoUpdateInterval = null;
+const AUTO_UPDATE_INTERVAL_MS = 60000; // 60 seconds
+let lastDataChecksum = ''; // Used to determine if data has changed
+
 // DOM Elements
 const giveawaysTable = document.getElementById('giveaways-table');
 const noResultsElement = document.getElementById('no-results');
@@ -12,14 +17,18 @@ const loadingContainer = document.querySelector('.loading-container');
 const searchInput = document.getElementById('searchInput');
 
 // Fetch data from Google Sheets
-async function fetchSheetData() {
+async function fetchSheetData(silent = false) {
     try {
-        // Show a loading message with status updates
-        updateLoadingMessage('Connecting to data source...');
-        return await tryAllDataSources();
+        // Show a loading message with status updates (unless silent mode)
+        if (!silent) {
+            updateLoadingMessage('Connecting to data source...');
+        }
+        return await tryAllDataSources(silent);
     } catch (error) {
         console.error('All data fetch methods failed:', error);
-        showError('Could not retrieve data from Google Sheets.');
+        if (!silent) {
+            showError('Could not retrieve data from Google Sheets.');
+        }
         return [];
     }
 }
@@ -34,14 +43,16 @@ function updateLoadingMessage(message) {
 }
 
 // Try all possible data sources
-async function tryAllDataSources() {
+async function tryAllDataSources(silent = false) {
     // Try multiple methods concurrently with a race condition
-    updateLoadingMessage('Fetching data (this may take a moment)...');
+    if (!silent) {
+        updateLoadingMessage('Fetching data (this may take a moment)...');
+    }
     
     // Define all data source methods we can try
     const dataSources = [
-        fetchDirectCSV(),
-        fetchWithCORSProxies(),
+        fetchDirectCSV(silent),
+        fetchWithCORSProxies(silent),
         fetchWithJSONP('csv').catch(e => null) // Make sure JSONP won't throw
     ];
     
@@ -60,10 +71,12 @@ async function tryAllDataSources() {
 }
 
 // Try the direct CSV approach with AllOrigins
-async function fetchDirectCSV() {
+async function fetchDirectCSV(silent = false) {
     try {
         console.log('Trying direct CSV export with AllOrigins (preferred method)...');
-        updateLoadingMessage('Connecting to AllOrigins...');
+        if (!silent) {
+            updateLoadingMessage('Connecting to AllOrigins...');
+        }
         
         const csvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&id=${SHEET_ID}`;
         const response = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(csvUrl), {
@@ -74,7 +87,9 @@ async function fetchDirectCSV() {
         });
         
         if (response.ok) {
-            updateLoadingMessage('LOADING BIG PP ENERGY...');
+            if (!silent) {
+                updateLoadingMessage('LOADING BIG PP ENERGY...');
+            }
             const csvText = await response.text();
             console.log('CSV data fetched successfully via AllOrigins');
             return parseCSV(csvText);
@@ -89,7 +104,7 @@ async function fetchDirectCSV() {
 }
 
 // Try using other CORS proxies for the CSV export
-async function fetchWithCORSProxies() {
+async function fetchWithCORSProxies(silent = false) {
     const corsProxies = [
         'https://corsproxy.io/?',
         'https://cors-anywhere.herokuapp.com/'
@@ -102,7 +117,9 @@ async function fetchWithCORSProxies() {
         return new Promise(async (resolve) => {
             try {
                 console.log(`Trying CSV with proxy: ${proxy}...`);
-                updateLoadingMessage(`Trying alternate data source...`);
+                if (!silent) {
+                    updateLoadingMessage(`Trying alternate data source...`);
+                }
                 
                 const response = await fetch(proxy + encodeURIComponent(csvUrl), {
                     method: 'GET',
@@ -718,6 +735,10 @@ async function initApp() {
         const loadTime = ((performance.now() - startTime) / 1000).toFixed(1);
         console.log(`Fetched ${giveaways.length} giveaways from the sheet in ${loadTime} seconds`);
         
+        // Calculate initial checksum for auto-update feature
+        lastDataChecksum = calculateDataChecksum(giveaways);
+        console.log('Initial data checksum calculated:', lastDataChecksum);
+        
         // Store original data in a global variable to ensure we always have the full dataset
         window.allGiveaways = [...giveaways];
         
@@ -826,6 +847,41 @@ async function initApp() {
         refreshButton.innerHTML = '<i class="fas fa-sync-alt"></i>';
         refreshButton.className = 'refresh-btn';
         refreshButton.title = 'Refresh data';
+        
+        // Create auto-update checkbox container and elements
+        const autoUpdateContainer = document.createElement('div');
+        autoUpdateContainer.className = 'auto-update-container';
+        
+        const autoUpdateCheckbox = document.createElement('input');
+        autoUpdateCheckbox.type = 'checkbox';
+        autoUpdateCheckbox.id = 'auto-update';
+        autoUpdateCheckbox.className = 'auto-update-checkbox';
+        
+        const autoUpdateLabel = document.createElement('label');
+        autoUpdateLabel.htmlFor = 'auto-update';
+        autoUpdateLabel.textContent = 'Auto Update';
+        
+        autoUpdateContainer.appendChild(autoUpdateCheckbox);
+        autoUpdateContainer.appendChild(autoUpdateLabel);
+        
+        // Check localStorage for saved preference
+        const savedAutoUpdate = localStorage.getItem('autoUpdateEnabled');
+        if (savedAutoUpdate === 'true') {
+            autoUpdateCheckbox.checked = true;
+            startAutoUpdate();
+        }
+        
+        // Add event listener to checkbox for toggling auto-update
+        autoUpdateCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                startAutoUpdate();
+                localStorage.setItem('autoUpdateEnabled', 'true');
+            } else {
+                stopAutoUpdate();
+                localStorage.setItem('autoUpdateEnabled', 'false');
+            }
+        });
+        
         refreshButton.addEventListener('click', async () => {
             // Show loading state on the button and table
             refreshButton.disabled = true;
@@ -844,6 +900,9 @@ async function initApp() {
                 
                 // Refetch data
                 const freshData = await fetchSheetData();
+                
+                // Update the checksum for auto-update
+                lastDataChecksum = calculateDataChecksum(freshData);
                 
                 // Update the global dataset and display
                 window.allGiveaways = [...freshData];
@@ -866,9 +925,10 @@ async function initApp() {
             }
         });
         
-        // Add refresh button to search container
+        // Add refresh button and auto-update checkbox to container
         const refreshContainer = document.createElement('div');
         refreshContainer.className = 'refresh-container';
+        refreshContainer.appendChild(autoUpdateContainer);
         refreshContainer.appendChild(refreshButton);
         document.querySelector('.filter-container').appendChild(refreshContainer);
         
@@ -921,6 +981,103 @@ function setupTableScrollIndicator() {
     
     // Update on window resize
     window.addEventListener('resize', updateScrollIndicator);
+}
+
+// Calculate a simple checksum of the data to detect changes
+function calculateDataChecksum(data) {
+    if (!data || data.length === 0) return '';
+    
+    // Create a string with relevant data for the first 10 rows (enough to detect most changes)
+    // This is more efficient than checking the entire dataset
+    const sampleSize = Math.min(data.length, 10);
+    let checksumString = '';
+    
+    for (let i = 0; i < sampleSize; i++) {
+        const row = data[i];
+        checksumString += `${row.winner}|${row.giveaway}|${row.twitch}|${row.discord}|`;
+    }
+    
+    // Add the total number of rows to catch additions/deletions
+    checksumString += `total:${data.length}`;
+    
+    // Simple hash function
+    let hash = 0;
+    for (let i = 0; i < checksumString.length; i++) {
+        const char = checksumString.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32bit integer
+    }
+    
+    return hash.toString();
+}
+
+// Start auto-update interval
+function startAutoUpdate() {
+    // Clear any existing interval
+    if (autoUpdateInterval) {
+        clearInterval(autoUpdateInterval);
+    }
+    
+    // Set new interval
+    autoUpdateInterval = setInterval(async () => {
+        if (document.hidden) {
+            // Don't auto-update when the tab is not visible
+            console.log('Skipping auto-update check: tab not visible');
+            return;
+        }
+        
+        console.log('Running auto-update check...');
+        try {
+            // Fetch data without showing loading indicators
+            const freshData = await fetchSheetData(true);
+            const newChecksum = calculateDataChecksum(freshData);
+            
+            // Compare checksums to see if data changed
+            if (newChecksum !== lastDataChecksum && lastDataChecksum !== '') {
+                console.log('Data change detected, refreshing...');
+                
+                // Show subtle loading indication
+                setTableLoading(true);
+                
+                // Update the global dataset and display
+                window.allGiveaways = [...freshData];
+                console.log(`Auto-refreshed data: ${freshData.length} rows loaded`);
+                
+                // Display all rows (or filtered if search is active)
+                const searchValue = searchInput.value.trim();
+                if (searchValue === '') {
+                    displayGiveaways(freshData);
+                } else {
+                    displayGiveaways(filterGiveaways(freshData, searchValue));
+                }
+                
+                // Flash the refresh button to indicate auto-update happened
+                const refreshButton = document.querySelector('.refresh-btn');
+                refreshButton.classList.add('auto-updated');
+                setTimeout(() => {
+                    refreshButton.classList.remove('auto-updated');
+                }, 1000);
+            } else {
+                console.log('No data changes detected');
+            }
+            
+            // Update checksum
+            lastDataChecksum = newChecksum;
+        } catch (error) {
+            console.error('Auto-update check failed:', error);
+        }
+    }, AUTO_UPDATE_INTERVAL_MS);
+    
+    console.log('Auto-update started: checking every', AUTO_UPDATE_INTERVAL_MS / 1000, 'seconds');
+}
+
+// Stop auto-update interval
+function stopAutoUpdate() {
+    if (autoUpdateInterval) {
+        clearInterval(autoUpdateInterval);
+        autoUpdateInterval = null;
+        console.log('Auto-update stopped');
+    }
 }
 
 // Start the app when DOM is loaded
