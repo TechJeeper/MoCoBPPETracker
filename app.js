@@ -15,86 +15,6 @@ const searchInput = document.getElementById('searchInput');
 // Check if running locally
 const isLocalEnvironment = window.location.protocol === 'file:';
 
-// Add more sample data to show a better representation of the table
-const LOCAL_DEV_DATA = [
-    {
-        winner: "MrADHDgames",
-        twitch: "MoCoMade",
-        discord: "MoCoMade",
-        website: "www.mocomade.us",
-        giveaway: "BPPE Keychain",
-        discount: "N/A",
-        shipsFrom: "United States",
-        shipping: "Free shipping.",
-        pictureUrl: ""
-    },
-    {
-        winner: "DariaDoesADHD",
-        twitch: "MoCoMade",
-        discord: "MoCoMade",
-        website: "www.mocomade.us",
-        giveaway: "Sticker set w/ one outdoor sticker",
-        discount: "N/A",
-        shipsFrom: "United States",
-        shipping: "Free shipping.",
-        pictureUrl: ""
-    },
-    {
-        winner: "k3lsb3lls",
-        twitch: "MoCoMade",
-        discord: "MoCoMade",
-        website: "www.mocomade.us",
-        giveaway: "3D printed coaster (Mermaid/white)",
-        discount: "N/A",
-        shipsFrom: "United States",
-        shipping: "Free shipping.",
-        pictureUrl: ""
-    },
-    {
-        winner: "TechJeeper",
-        twitch: "SewRoyal",
-        discord: "SewRoyal",
-        website: "https://www.sewroyal.co/shop/",
-        giveaway: "1 skein of choice",
-        discount: "BPPE2025 for 25% off.",
-        shipsFrom: "US",
-        shipping: "Free domestic shipping - Subsidized $10 International shipping.",
-        pictureUrl: "https://discord.com/channels/778699460989419530/1076664393036726292/1351927583008358472"
-    },
-    {
-        winner: "ArtologyInk",
-        twitch: "boosted_brims",
-        discord: "Boosted_Brims",
-        website: "https://boostedbrims-shop.fourthwall.com/",
-        giveaway: "5 panel camo",
-        discount: "BPPE2025 for 10% off.",
-        shipsFrom: "USA",
-        shipping: "Free domestic shipping - International must pay.",
-        pictureUrl: "https://discord.com/channels/778699460989419530/1076664393036726292/1353585670161170518"
-    },
-    {
-        winner: "Yaone13",
-        twitch: "SpicedEliastrations",
-        discord: "SpicedEliastrations",
-        website: "https://www.spicedeliastrations.com/shop",
-        giveaway: "Copy of Princesa Taco (all ages graphic novel)",
-        discount: "BPPE2025 for 20% off.",
-        shipsFrom: "United States",
-        shipping: "Free shipping.",
-        pictureUrl: "https://discord.com/channels/778699460989419530/1076664393036726292/1354529483125686332"
-    },
-    {
-        winner: "SpicedEliastrations",
-        twitch: "SparkleNChaos",
-        discord: "Sparkle",
-        website: "https://ko-fi.com/sparklenchaos/shop",
-        giveaway: "PEEN keychain",
-        discount: "N/A",
-        shipsFrom: "Croatia",
-        shipping: "Winner pays shipping.",
-        pictureUrl: "https://discord.com/channels/778699460989419530/1076664393036726292/1351984083919700099"
-    }
-];
 
 // Fetch data from Google Sheets
 async function fetchSheetData() {
@@ -139,11 +59,6 @@ async function fetchSheetData() {
 async function tryAllDataSources() {
     // First try the Google Sheets API
     try {
-        const apiUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/A1:Z1000?key=`;
-        const response = await fetch(apiUrl, {
-            method: 'GET',
-            mode: 'cors',
-            headers: {'Accept': 'application/json'}
         });
         
         if (response.ok) {
