@@ -127,6 +127,15 @@ a:hover {
     align-items: center;
     justify-content: center;
     min-height: 200px;
+    position: relative;
+    z-index: 10;
+}
+
+/* When loading container is visible, blur the table container */
+.loading-container:not([style*="display: none"]) ~ .table-container {
+    filter: blur(8px);
+    transition: filter 0.3s ease;
+    pointer-events: none;
 }
 
 .loading-spinner {
