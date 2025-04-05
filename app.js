@@ -119,20 +119,38 @@ async function fetchSheetData() {
 
 // Try all possible data sources
 async function tryAllDataSources() {
-    // First try the Google Sheets API
+    // First try the direct CSV approach with AllOrigins - this seems to work best
+    try {
+        console.log('Trying direct CSV export with AllOrigins (preferred method)...');
+        const csvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&id=${SHEET_ID}`;
+        const response = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(csvUrl), {
+            method: 'GET',
+            mode: 'cors'
+        });
+        
+        if (response.ok) {
+            const csvText = await response.text();
+            console.log('CSV data fetched successfully via AllOrigins');
+            return parseCSV(csvText);
+        } else {
+            console.log('AllOrigins CSV method failed with status:', response.status);
+        }
+    } catch (e) {
+        console.log('Direct AllOrigins CSV method failed:', e);
+    }
 
-    // Try using CORS proxies for the CSV export
+    // Try using other CORS proxies for the CSV export
     const corsProxies = [
-        'https://api.allorigins.win/raw?url=',
         'https://corsproxy.io/?',
         'https://cors-anywhere.herokuapp.com/'
     ];
     
     const csvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&id=${SHEET_ID}`;
     
-    // Try each CORS proxy
+    // Try each additional CORS proxy
     for (const proxy of corsProxies) {
         try {
+            console.log(`Trying CSV with proxy: ${proxy}...`);
             const response = await fetch(proxy + encodeURIComponent(csvUrl), {
                 method: 'GET',
                 mode: 'cors'
@@ -140,6 +158,7 @@ async function tryAllDataSources() {
             
             if (response.ok) {
                 const csvText = await response.text();
+                console.log(`CSV data fetched successfully via ${proxy}`);
                 return parseCSV(csvText);
             }
         } catch (e) {
@@ -149,9 +168,29 @@ async function tryAllDataSources() {
     
     // Try the JSONP approach
     try {
-        return await fetchWithJSONP();
+        console.log('Trying JSONP method...');
+        const result = await fetchWithJSONP();
+        console.log('JSONP method succeeded');
+        return result;
     } catch (e) {
         console.log('JSONP method failed:', e);
+    }
+    
+    // Try direct Google Sheets API as last resort (requires API key)
+    try {
+        console.log('Trying Google Sheets API as last resort...');
+        const apiUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/A1:Z1000?key=AIzaSyBPvqeSqEBJqQF2ZY9dF8XXSdY1gRTXUmY`;
+        const response = await fetch(apiUrl);
+        
+        if (response.ok) {
+            const data = await response.json();
+            console.log('Google Sheets API fetch successful');
+            return parseGoogleSheetsAPI(data);
+        } else {
+            console.log('Google Sheets API failed with status:', response.status);
+        }
+    } catch (e) {
+        console.log('Google Sheets API method failed:', e);
     }
     
     // If all methods fail, throw an error
