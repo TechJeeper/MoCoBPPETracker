@@ -4,7 +4,6 @@ const DEFAULT_SHEET_ID = '1pM8fMy2IVe_Sj1mBieFpMxO_to0Z6GDcirbUUZwCT9E';
 const urlParams = new URLSearchParams(window.location.search);
 const SHEET_ID = urlParams.get('sheet') || DEFAULT_SHEET_ID;
 const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit?gid=0#gid=0`;
-const FALLBACK_JSON = 'data/giveaways.json';
 
 // DOM Elements
 const giveawaysTable = document.getElementById('giveaways-table');
@@ -12,108 +11,14 @@ const noResultsElement = document.getElementById('no-results');
 const loadingContainer = document.querySelector('.loading-container');
 const searchInput = document.getElementById('searchInput');
 
-// Check if running locally
-const isLocalEnvironment = window.location.protocol === 'file:';
-
-// Add more sample data to show a better representation of the table
-const LOCAL_DEV_DATA = [
-    {
-        winner: "MrADHDgames",
-        twitch: "MoCoMade",
-        discord: "MoCoMade",
-        website: "www.mocomade.us",
-        giveaway: "BPPE Keychain",
-        discount: "N/A",
-        shipsFrom: "United States",
-        shipping: "Free shipping.",
-        pictureUrl: ""
-    },
-    {
-        winner: "DariaDoesADHD",
-        twitch: "MoCoMade",
-        discord: "MoCoMade",
-        website: "www.mocomade.us",
-        giveaway: "Sticker set w/ one outdoor sticker",
-        discount: "N/A",
-        shipsFrom: "United States",
-        shipping: "Free shipping.",
-        pictureUrl: ""
-    },
-    {
-        winner: "k3lsb3lls",
-        twitch: "MoCoMade",
-        discord: "MoCoMade",
-        website: "www.mocomade.us",
-        giveaway: "3D printed coaster (Mermaid/white)",
-        discount: "N/A",
-        shipsFrom: "United States",
-        shipping: "Free shipping.",
-        pictureUrl: ""
-    },
-    {
-        winner: "TechJeeper",
-        twitch: "SewRoyal",
-        discord: "SewRoyal",
-        website: "https://www.sewroyal.co/shop/",
-        giveaway: "1 skein of choice",
-        discount: "BPPE2025 for 25% off.",
-        shipsFrom: "US",
-        shipping: "Free domestic shipping - Subsidized $10 International shipping.",
-        pictureUrl: "https://discord.com/channels/778699460989419530/1076664393036726292/1351927583008358472"
-    },
-    {
-        winner: "ArtologyInk",
-        twitch: "boosted_brims",
-        discord: "Boosted_Brims",
-        website: "https://boostedbrims-shop.fourthwall.com/",
-        giveaway: "5 panel camo",
-        discount: "BPPE2025 for 10% off.",
-        shipsFrom: "USA",
-        shipping: "Free domestic shipping - International must pay.",
-        pictureUrl: "https://discord.com/channels/778699460989419530/1076664393036726292/1353585670161170518"
-    },
-    {
-        winner: "Yaone13",
-        twitch: "SpicedEliastrations",
-        discord: "SpicedEliastrations",
-        website: "https://www.spicedeliastrations.com/shop",
-        giveaway: "Copy of Princesa Taco (all ages graphic novel)",
-        discount: "BPPE2025 for 20% off.",
-        shipsFrom: "United States",
-        shipping: "Free shipping.",
-        pictureUrl: "https://discord.com/channels/778699460989419530/1076664393036726292/1354529483125686332"
-    },
-    {
-        winner: "SpicedEliastrations",
-        twitch: "SparkleNChaos",
-        discord: "Sparkle",
-        website: "https://ko-fi.com/sparklenchaos/shop",
-        giveaway: "PEEN keychain",
-        discount: "N/A",
-        shipsFrom: "Croatia",
-        shipping: "Winner pays shipping.",
-        pictureUrl: "https://discord.com/channels/778699460989419530/1076664393036726292/1351984083919700099"
-    }
-];
-
 // Fetch data from Google Sheets
 async function fetchSheetData() {
-    // Add more options for data fetching - try a public CORS proxy
-    const corsProxies = [
-        'https://api.allorigins.win/raw?url=',
-        'https://corsproxy.io/?',
-        'https://cors-anywhere.herokuapp.com/'
-    ];
-    
-
-    
-    // Try all possible data sources
     try {
         return await tryAllDataSources();
     } catch (error) {
         console.error('All data fetch methods failed:', error);
-        showError('Could not retrieve data from Google Sheets. Using sample data instead.');
-        return LOCAL_DEV_DATA;
+        showError('Could not retrieve data from Google Sheets.');
+        return [];
     }
 }
 
@@ -176,23 +81,6 @@ async function tryAllDataSources() {
         console.log('JSONP method failed:', e);
     }
     
-    // Try direct Google Sheets API as last resort (requires API key)
-    try {
-        console.log('Trying Google Sheets API as last resort...');
-        const apiUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/A1:Z1000?key=AIzaSyBPvqeSqEBJqQF2ZY9dF8XXSdY1gRTXUmY`;
-        const response = await fetch(apiUrl);
-        
-        if (response.ok) {
-            const data = await response.json();
-            console.log('Google Sheets API fetch successful');
-            return parseGoogleSheetsAPI(data);
-        } else {
-            console.log('Google Sheets API failed with status:', response.status);
-        }
-    } catch (e) {
-        console.log('Google Sheets API method failed:', e);
-    }
-    
     // If all methods fail, throw an error
     throw new Error('All data fetch methods failed');
 }
@@ -223,7 +111,7 @@ function fetchWithJSONP(method = 'csv') {
             // For public published sheets
             url = `https://docs.google.com/spreadsheets/d/e/2PACX-${SHEET_ID}/pubhtml?gid=0&single=true&output=json&callback=${callbackName}`;
         } else {
-            // For direct CSV access via a CORS proxy (example.com should be replaced with an actual CORS proxy)
+            // For direct CSV access via a CORS proxy
             url = `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`)}`;
         }
         
@@ -326,101 +214,6 @@ function getValueFromCell(cell) {
 function processCSVJSONP(data) {
     // Assuming data is the raw CSV text
     return parseCSV(data);
-}
-
-// Parse data from Google Sheets API v4 response
-function parseGoogleSheetsAPI(data) {
-    if (!data.values || data.values.length < 2) {
-        console.error('No data found in API response');
-        return [];
-    }
-    
-    const headers = data.values[0];
-    
-    // Find indices for our columns of interest
-    const winnerIndex = headers.findIndex(h => h && h.toLowerCase().includes('winner') && !h.toLowerCase().includes('form'));
-    const twitchIndex = headers.findIndex(h => h && h.toLowerCase().includes('twitch'));
-    const discordIndex = headers.findIndex(h => h && h.toLowerCase().includes('discord'));
-    const websiteIndex = headers.findIndex(h => h && h.toLowerCase().includes('website'));
-    const giveawayIndex = headers.findIndex(h => h && h.toLowerCase().includes('giveaway') && !h.toLowerCase().includes('pictures'));
-    const discountIndex = headers.findIndex(h => h && h.toLowerCase().includes('discount'));
-    const shipsFromIndex = headers.findIndex(h => h && (h.toLowerCase().includes('ships from') || h.toLowerCase().includes('where item ships from')));
-    const shippingIndex = headers.findIndex(h => h && h.toLowerCase().includes('shipping') && !h.toLowerCase().includes('ships from'));
-    const picturesIndex = headers.findIndex(h => h && h.toLowerCase().includes('giveaway pictures'));
-    
-    console.log('Found column indices:', {
-        winnerIndex,
-        twitchIndex,
-        discordIndex,
-        websiteIndex,
-        giveawayIndex,
-        discountIndex,
-        shipsFromIndex,
-        shippingIndex,
-        picturesIndex
-    });
-    
-    if (winnerIndex === -1 || giveawayIndex === -1) {
-        console.error('Required columns "Winner" or "Giveaway" not found in spreadsheet');
-    }
-    
-    const results = [];
-    let keywordCounter = {}; // Track occurrences of important keywords for debugging
-    
-    // Skip header row - Row 1 in spreadsheet is the header
-    for (let i = 1; i < data.values.length; i++) {
-        const row = data.values[i];
-        
-        // Calculate the actual spreadsheet row number (header is row 1, data starts at row 2)
-        const spreadsheetRowNumber = i + 1;
-        
-        // Check if row exists and has enough cells
-        if (!row || row.length === 0) {
-            console.log(`Skipping empty row ${spreadsheetRowNumber} in API response`);
-            continue;
-        }
-        
-        // Extract key fields for more inclusive filtering - accept ANY content
-        const result = {
-            rowNumber: spreadsheetRowNumber, // Store the exact spreadsheet row number
-            winner: (winnerIndex >= 0 && winnerIndex < row.length && row[winnerIndex]) || 'N/A',
-            twitch: (twitchIndex >= 0 && twitchIndex < row.length && row[twitchIndex]) || 'N/A',
-            discord: (discordIndex >= 0 && discordIndex < row.length && row[discordIndex]) || 'N/A',
-            website: (websiteIndex >= 0 && websiteIndex < row.length && row[websiteIndex]) || 'N/A',
-            giveaway: (giveawayIndex >= 0 && giveawayIndex < row.length && row[giveawayIndex]) || 'N/A',
-            discount: (discountIndex >= 0 && discountIndex < row.length && row[discountIndex]) || 'N/A',
-            shipsFrom: (shipsFromIndex >= 0 && shipsFromIndex < row.length && row[shipsFromIndex]) || 'N/A',
-            shipping: (shippingIndex >= 0 && shippingIndex < row.length && row[shippingIndex]) || 'N/A',
-            pictureUrl: (picturesIndex >= 0 && picturesIndex < row.length && row[picturesIndex]) || ''
-        };
-        
-        // Track occurrences of keywords for debugging
-        for (const [key, value] of Object.entries(result)) {
-            if (typeof value === 'string') {
-                const lowerValue = value.toLowerCase();
-                // Track occurrences of specific keywords
-                const keywordsToTrack = ['techjeeper', 'boosted', 'spark'];
-                keywordsToTrack.forEach(keyword => {
-                    if (lowerValue.includes(keyword)) {
-                        keywordCounter[keyword] = (keywordCounter[keyword] || 0) + 1;
-                        console.log(`Found "${keyword}" in row ${spreadsheetRowNumber}, field: ${key}, value: ${value}`);
-                    }
-                });
-            }
-        }
-        
-        // Keep all rows with actual content (don't filter out N/A)
-        // Only skip completely empty rows
-        if (row.some(cell => cell && cell.trim && cell.trim() !== '')) {
-            results.push(result);
-        } else {
-            console.log(`Skipping empty row ${spreadsheetRowNumber}`);
-        }
-    }
-    
-    console.log('Keyword counter:', keywordCounter);
-    console.log(`Total rows loaded: ${results.length}`);
-    return results;
 }
 
 // Parse CSV data with similar improvements
