@@ -1,9 +1,9 @@
-/* Main color scheme - black background with purple accents */
+/* Main color scheme - black background with rainbow accents */
 :root {
     --main-bg-color: #121212;
     --secondary-bg-color: #1e1e1e;
-    --accent-color: #9b4dca;
-    --accent-light: #c490e4;
+    --accent-color: linear-gradient(90deg, #ff0066, #ff9900, #33cc33, #00ccff, #9933ff);
+    --accent-light: linear-gradient(90deg, #ff5599, #ffbb33, #66dd66, #66ddff, #bb66ff);
     --text-color: #f0f0f0;
     --secondary-text-color: #cccccc;
     --border-color: #333333;
@@ -11,7 +11,21 @@
     --completed-color: #666666;
     --completed-bg: #191919;
     --completed-hover-bg: #232323;
-    --row-highlight-color: rgba(155, 77, 202, 0.15);
+    --row-highlight-color: rgba(0, 204, 255, 0.15);
+    
+    /* Rainbow colors for various elements */
+    --rainbow-1: #ff0066;
+    --rainbow-2: #ff9900;
+    --rainbow-3: #33cc33;
+    --rainbow-4: #00ccff;
+    --rainbow-5: #9933ff;
+    
+    /* Light rainbow colors */
+    --rainbow-light-1: #ff5599;
+    --rainbow-light-2: #ffbb33;
+    --rainbow-light-3: #66dd66;
+    --rainbow-light-4: #66ddff;
+    --rainbow-light-5: #bb66ff;
 }
 
 /* Global styles */
@@ -25,12 +39,13 @@ body {
 }
 
 a {
-    color: var(--accent-color);
+    color: var(--rainbow-4);
     text-decoration: none;
+    transition: color 0.3s;
 }
 
 a:hover {
-    color: var(--accent-light);
+    color: var(--rainbow-light-2);
     text-decoration: underline;
 }
 
@@ -45,8 +60,34 @@ a:hover {
 
 .header h1 {
     margin: 0;
-    font-size: 1.6rem;
-    color: var(--accent-color);
+    font-size: 1.9rem;
+    background: linear-gradient(to right, var(--rainbow-1), var(--rainbow-2), var(--rainbow-3), var(--rainbow-4), var(--rainbow-5));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: 0 0 4px var(--rainbow-light-4);
+    animation: rainbow-glow 10s linear infinite;
+}
+
+@keyframes rainbow-glow {
+    0% {
+        text-shadow: 0 0 4px var(--rainbow-light-1);
+    }
+    20% {
+        text-shadow: 0 0 4px var(--rainbow-light-2);
+    }
+    40% {
+        text-shadow: 0 0 4px var(--rainbow-light-3);
+    }
+    60% {
+        text-shadow: 0 0 4px var(--rainbow-light-4);
+    }
+    80% {
+        text-shadow: 0 0 4px var(--rainbow-light-5);
+    }
+    100% {
+        text-shadow: 0 0 4px var(--rainbow-light-1);
+    }
 }
 
 .header p {
@@ -84,8 +125,8 @@ a:hover {
 
 #searchInput:focus {
     outline: none;
-    border-color: var(--accent-color);
-    box-shadow: 0 0 0 2px rgba(155, 77, 202, 0.25);
+    border-color: var(--rainbow-3);
+    box-shadow: 0 0 0 2px rgba(0, 204, 255, 0.25);
 }
 
 .search-clear-btn {
@@ -108,8 +149,8 @@ a:hover {
 }
 
 .search-clear-btn:hover {
-    background-color: rgba(155, 77, 202, 0.2);
-    color: var(--accent-color);
+    background-color: rgba(0, 204, 255, 0.2);
+    color: var(--rainbow-4);
 }
 
 /* Hide the clear button when input is empty (using JavaScript to toggle) */
@@ -140,7 +181,10 @@ a:hover {
 
 .loading-spinner {
     border: 4px solid var(--border-color);
-    border-top: 4px solid var(--accent-color);
+    border-top: 4px solid var(--rainbow-3);
+    border-right: 4px solid var(--rainbow-1);
+    border-bottom: 4px solid var(--rainbow-5);
+    border-left: 4px solid var(--rainbow-2);
     border-radius: 50%;
     width: 40px;
     height: 40px;
@@ -188,7 +232,7 @@ a:hover {
     border-radius: 4px;
     margin: 0.5rem;
     scrollbar-width: thin;
-    scrollbar-color: var(--accent-color) var(--secondary-bg-color);
+    scrollbar-color: var(--rainbow-3) var(--secondary-bg-color);
     position: relative;
 }
 
@@ -202,7 +246,7 @@ a:hover {
 }
 
 .table-container::-webkit-scrollbar-thumb {
-    background-color: var(--accent-color);
+    background: linear-gradient(to bottom, var(--rainbow-1), var(--rainbow-3), var(--rainbow-5));
     border-radius: 4px;
 }
 
@@ -224,11 +268,28 @@ thead {
 
 th {
     background-color: var(--secondary-bg-color);
-    color: var(--accent-color);
+    background-image: linear-gradient(90deg, var(--rainbow-1), var(--rainbow-2), var(--rainbow-3), var(--rainbow-4), var(--rainbow-5));
+    background-size: 400% 100%;
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
     font-weight: bold;
     padding: 10px 6px;
     text-align: left;
-    border-bottom: 2px solid var(--accent-color);
+    border-bottom: 2px solid var(--rainbow-4);
+    animation: rainbow-bg 15s linear infinite;
+}
+
+@keyframes rainbow-bg {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
 }
 
 td {
@@ -316,27 +377,29 @@ th:nth-child(10), td:nth-child(10) { /* Pictures */
 }
 
 .website-icon {
-    color: var(--accent-color);
+    color: var(--rainbow-2);
     font-size: 1.2rem;
+    transition: color 0.3s;
 }
 
 .website-icon:hover {
-    color: var(--accent-light);
+    color: var(--rainbow-light-2);
 }
 
 .discord-link {
     display: inline-block;
-    background-color: var(--accent-color);
+    background: linear-gradient(90deg, var(--rainbow-5), var(--rainbow-4));
     color: white !important;
     border-radius: 3px;
     padding: 3px 6px;
     text-decoration: none;
     font-size: 0.75rem;
     white-space: nowrap;
+    transition: all 0.3s;
 }
 
 .discord-link:hover {
-    background-color: var(--accent-light);
+    background: linear-gradient(90deg, var(--rainbow-5), var(--rainbow-1));
     text-decoration: none;
 }
 
@@ -375,7 +438,7 @@ th:nth-child(10), td:nth-child(10) { /* Pictures */
     text-align: center;
     padding: 5px;
     margin-top: 5px;
-    color: var(--accent-light);
+    color: var(--rainbow-light-4);
     font-size: 0.8rem;
     opacity: 0.8;
     animation: fade-in-out 2s infinite;
@@ -426,7 +489,7 @@ th:nth-child(10), td:nth-child(10) { /* Pictures */
     display: flex;
     align-items: center;
     margin-right: 10px;
-    background-color: rgba(155, 77, 202, 0.1);
+    background-color: rgba(0, 204, 255, 0.1);
     padding: 4px 8px;
     border-radius: 4px;
     border: 1px solid var(--border-color);
@@ -442,11 +505,11 @@ th:nth-child(10), td:nth-child(10) { /* Pictures */
 
 .auto-update-checkbox {
     cursor: pointer;
-    accent-color: var(--accent-color);
+    accent-color: var(--rainbow-2);
 }
 
 .refresh-btn {
-    background-color: var(--accent-color);
+    background: linear-gradient(135deg, var(--rainbow-1), var(--rainbow-5));
     color: white;
     border: none;
     border-radius: 50%;
@@ -456,12 +519,12 @@ th:nth-child(10), td:nth-child(10) { /* Pictures */
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.3s;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .refresh-btn:hover {
-    background-color: var(--accent-light);
+    background: linear-gradient(135deg, var(--rainbow-light-1), var(--rainbow-light-5));
     transform: rotate(45deg);
 }
 
@@ -480,9 +543,9 @@ th:nth-child(10), td:nth-child(10) { /* Pictures */
 }
 
 @keyframes auto-update-flash {
-    0% { transform: scale(1); background-color: var(--accent-color); }
-    50% { transform: scale(1.2); background-color: var(--accent-light); box-shadow: 0 0 10px var(--accent-light); }
-    100% { transform: scale(1); background-color: var(--accent-color); }
+    0% { transform: scale(1); background: linear-gradient(135deg, var(--rainbow-1), var(--rainbow-5)); }
+    50% { transform: scale(1.2); background: linear-gradient(135deg, var(--rainbow-light-1), var(--rainbow-light-5)); box-shadow: 0 0 10px var(--rainbow-light-4); }
+    100% { transform: scale(1); background: linear-gradient(135deg, var(--rainbow-1), var(--rainbow-5)); }
 }
 
 /* Table loading state */
@@ -517,7 +580,10 @@ th:nth-child(10), td:nth-child(10) { /* Pictures */
 
 .table-spinner {
     border: 3px solid var(--border-color);
-    border-top: 3px solid var(--accent-color);
+    border-top: 3px solid var(--rainbow-1);
+    border-right: 3px solid var(--rainbow-3);
+    border-bottom: 3px solid var(--rainbow-5);
+    border-left: 3px solid var(--rainbow-2);
     border-radius: 50%;
     width: 30px;
     height: 30px;
@@ -534,7 +600,7 @@ th:nth-child(10), td:nth-child(10) { /* Pictures */
     text-align: center;
     padding: 0.25rem 0;
     margin-top: 0.4rem;
-    color: var(--secondary-text-color);
+    color: var(--rainbow-3);
     background-color: var(--secondary-bg-color);
     border-top: 1px solid var(--border-color);
 }
@@ -546,13 +612,13 @@ th:nth-child(10), td:nth-child(10) { /* Pictures */
 }
 
 .footer a {
-    color: var(--accent-color);
+    color: var(--rainbow-3);
     text-decoration: none;
-    transition: color 0.2s;
+    transition: color 0.3s;
 }
 
 .footer a:hover {
-    color: var(--accent-light);
+    color: var(--rainbow-light-3);
     text-decoration: underline;
 }
 
