@@ -139,7 +139,7 @@ async function fetchSheetData() {
 async function tryAllDataSources() {
     // First try the Google Sheets API
     try {
-        const apiUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/A1:Z1000?key=AIzaSyBPvqeSqEBJqQF2ZY9dF8XXSdY1gRTXUmY`;
+        const apiUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/A1:Z1000?key=`;
         const response = await fetch(apiUrl, {
             method: 'GET',
             mode: 'cors',
