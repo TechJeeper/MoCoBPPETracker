@@ -409,7 +409,7 @@ function parseCSVRow(line) {
 }
 
 // Set table loading state
-function setTableLoading(isLoading) {
+function setTableLoading(isLoading, isInitialLoad = false) {
     const tableContainer = document.querySelector('.table-container');
     
     // Remove existing overlay if any
@@ -422,6 +422,11 @@ function setTableLoading(isLoading) {
         // Add loading classes and create overlay
         tableContainer.classList.add('table-loading');
         
+        // Add additional class for initial loading
+        if (isInitialLoad) {
+            tableContainer.classList.add('initial-loading');
+        }
+        
         const overlay = document.createElement('div');
         overlay.className = 'table-loading-overlay';
         
@@ -433,13 +438,18 @@ function setTableLoading(isLoading) {
     } else {
         // Remove loading classes
         tableContainer.classList.remove('table-loading');
+        tableContainer.classList.remove('initial-loading');
     }
 }
 
 // Display giveaways in a table format
 function displayGiveaways(giveaways) {
-    // Set table to loading state before updating
-    setTableLoading(true);
+    // For initial load (during app initialization), we want to proceed differently
+    // Use a flag to determine if this is the first display after app startup
+    const isFirstLoad = !window.hasDisplayedData;
+    
+    // Set table to loading state before updating, with more blur for initial load
+    setTableLoading(true, isFirstLoad);
     
     // Clear the current table rows
     const tableBody = giveawaysTable.querySelector('tbody');
@@ -584,9 +594,6 @@ function displayGiveaways(giveaways) {
         tableBody.appendChild(row);
     });
     
-    // For initial load (during app initialization), we want to proceed differently
-    // Use a flag to determine if this is the first display after app startup
-    const isFirstLoad = !window.hasDisplayedData;
     window.hasDisplayedData = true;
     
     if (isFirstLoad) {
@@ -823,12 +830,17 @@ async function initApp() {
             // Show loading state on the button and table
             refreshButton.disabled = true;
             refreshButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-            setTableLoading(true);
+            
+            // Apply a strong blur effect for refresh
+            setTableLoading(true, true);
             
             try {
                 // Clear search first
                 searchInput.value = '';
                 clearButton.classList.add('hidden');
+                
+                // Show a loading message
+                updateLoadingMessage('Refreshing data from spreadsheet...');
                 
                 // Refetch data
                 const freshData = await fetchSheetData();

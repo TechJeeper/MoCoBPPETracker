@@ -15,17 +15,7 @@ A web interface that displays data from a Google Sheet, showing giveaway informa
 
 ### Local Development
 
-There are two ways to run this app locally:
-
-#### Method 1: Simple Viewing (with Sample Data)
-
-1. Clone this repository
-2. Open `index.html` in your browser
-3. The app will automatically detect it's running locally (as a file://) and use sample data
-
-#### Method 2: Full Functionality (with Real Data)
-
-Due to CORS restrictions, Google Sheets data can't be accessed directly from a local HTML file. To get around this:
+To run this app locally:
 
 1. Clone this repository
 2. Use a local web server to serve the files. Options include:
@@ -42,8 +32,6 @@ Due to CORS restrictions, Google Sheets data can't be accessed directly from a l
 4. Under "Source", select the branch you want to deploy (usually `main` or `master`)
 5. Click "Save"
 6. Your site will be published at `https://[your-username].github.io/[repository-name]/`
-
-When deployed to GitHub Pages or any web server, the app will try to access the Google Sheet directly.
 
 ### Data Backup Script
 
@@ -90,19 +78,15 @@ This app uses:
 
 The app implements several strategies to handle Cross-Origin Resource Sharing (CORS) restrictions:
 
-1. Detection of local file environment with fallback to sample data
-2. Using CORS mode with proper headers in fetch requests
-3. JSONP approach with a CORS proxy for accessing Google Sheets data
-4. Sample data fallback to ensure something displays even if all network methods fail
+1. Using CORS mode with proper headers in fetch requests
+2. JSONP approach with a CORS proxy for accessing Google Sheets data
 
 ## Data Access Methods
 
 The app attempts to access the Google Sheet data using several methods, in this order:
-1. Google Sheets API v4 (read-only, public access)
-2. JSONP proxy for CSV data
-3. Direct CSV export with CORS handling
-4. JSONP for published sheet data
-5. Fallback to sample data
+1. Direct CSV export with AllOrigins CORS proxy
+2. Other CORS proxies for CSV data
+3. JSONP for accessing sheet data
 
 This ensures the app works in a variety of environments and hosting scenarios.
 
