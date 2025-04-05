@@ -15,6 +15,191 @@ const giveawaysTable = document.getElementById('giveaways-table');
 const noResultsElement = document.getElementById('no-results');
 const loadingContainer = document.querySelector('.loading-container');
 const searchInput = document.getElementById('searchInput');
+const websiteModal = document.getElementById('website-modal');
+const websiteList = document.getElementById('website-list');
+const websiteModalClose = document.querySelector('.website-modal-close');
+
+// Setup modal close button
+if (websiteModalClose) {
+    websiteModalClose.addEventListener('click', () => {
+        websiteModal.style.display = 'none';
+    });
+}
+
+// Close modal when clicking outside of it
+window.addEventListener('click', (event) => {
+    if (event.target === websiteModal) {
+        websiteModal.style.display = 'none';
+    }
+});
+
+// Close modal with Escape key
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && websiteModal.style.display === 'flex') {
+        websiteModal.style.display = 'none';
+    }
+});
+
+// Function to check if a string contains multiple URLs
+function containsMultipleUrls(text) {
+    if (!text || typeof text !== 'string') return false;
+    
+    // Use our extractUrls function to find all normalized unique URLs
+    const urls = extractUrls(text);
+    return urls.length > 1;
+}
+
+// Function to extract URLs from text
+function extractUrls(text) {
+    if (!text || typeof text !== 'string') return [];
+    
+    // Sanitize the text to handle HTML entities and escape sequences
+    const sanitizedText = sanitizeField(text, '');
+    
+    // Split by common separators like 'and', 'for', commas, etc.
+    // This helps handle cases like "https://site1.com for clothing and https://site2.com for art"
+    const parts = sanitizedText.split(/\s+(?:and|for|,|\n|\r|;)\s+/);
+    let allUrls = [];
+    
+    parts.forEach(part => {
+        // Match URLs with http/https protocol
+        const httpRegex = /(https?:\/\/[^\s]+)/g;
+        const httpMatches = part.match(httpRegex) || [];
+        
+        // Only look for domains without protocol if no http/https URLs were found
+        if (httpMatches.length === 0) {
+            // Match domain-like patterns (.com, .org, etc.) without protocol
+            // Only if they look like actual domains (word character followed by dot and TLD)
+            const domainRegex = /\b([a-zA-Z0-9][-a-zA-Z0-9]*[a-zA-Z0-9]\.(com|org|net|io|me|etsy|printify|shop|dev|co)[-a-zA-Z0-9./]*)/g;
+            const domainMatches = part.match(domainRegex) || [];
+            allUrls = [...allUrls, ...domainMatches];
+        } else {
+            allUrls = [...allUrls, ...httpMatches];
+        }
+    });
+    
+    // Clean up URLs (remove trailing punctuation, etc.)
+    allUrls = allUrls.map(url => {
+        // Decode HTML entities in URLs
+        url = url.replace(/&amp;/g, '&')
+                 .replace(/&lt;/g, '<')
+                 .replace(/&gt;/g, '>')
+                 .replace(/&quot;/g, '"');
+        
+        // Remove trailing punctuation that might have been included in the match
+        return url.replace(/[.,;:!?)]$/, '');
+    });
+    
+    // Normalize URLs for deduplication
+    const normalizedUrls = [];
+    const urlMap = new Map(); // Use a Map to track normalized URLs
+    
+    allUrls.forEach(url => {
+        // Create a normalized version of the URL for comparison
+        let normalizedUrl = url.toLowerCase().trim();
+        
+        // Remove protocol for normalization
+        if (normalizedUrl.startsWith('http://')) {
+            normalizedUrl = normalizedUrl.substring(7);
+        } else if (normalizedUrl.startsWith('https://')) {
+            normalizedUrl = normalizedUrl.substring(8);
+        }
+        
+        // Remove trailing slashes for normalization
+        normalizedUrl = normalizedUrl.replace(/\/+$/, '');
+        
+        // Remove www. prefix for normalization
+        const withoutWww = normalizedUrl.startsWith('www.') ? normalizedUrl.substring(4) : normalizedUrl;
+        
+        // Use the base domain (without www) for normalization to prevent duplicates
+        if (!urlMap.has(withoutWww)) {
+            urlMap.set(withoutWww, url); // Store original URL format
+            normalizedUrls.push(url);
+        }
+    });
+    
+    return normalizedUrls;
+}
+
+// Function to show website links in modal
+function showWebsiteLinksModal(urls, title) {
+    // Clear previous links
+    websiteList.innerHTML = '';
+    
+    // Update title if provided
+    if (title) {
+        const titleElement = document.querySelector('.website-modal-title');
+        if (titleElement) {
+            titleElement.textContent = title;
+        }
+    }
+    
+    // Prioritize full URLs with protocol and normalize for display
+    // This ensures we don't show both www.domain.com and domain.com 
+    const processedUrls = [];
+    const seenDomains = new Set();
+    
+    // First pass: add all URLs with http/https protocol
+    urls.forEach(url => {
+        let formattedUrl = url;
+        // Ensure URL has a protocol
+        if (!url.toLowerCase().startsWith('http://') && !url.toLowerCase().startsWith('https://')) {
+            formattedUrl = 'https://' + url;
+        }
+        
+        // Create normalized version for deduplication
+        let normalizedDomain = formattedUrl.toLowerCase();
+        if (normalizedDomain.startsWith('http://')) {
+            normalizedDomain = normalizedDomain.substring(7);
+        } else if (normalizedDomain.startsWith('https://')) {
+            normalizedDomain = normalizedDomain.substring(8);
+        }
+        
+        // Remove trailing slash
+        normalizedDomain = normalizedDomain.replace(/\/+$/, '');
+        
+        // Remove www. for comparison
+        if (normalizedDomain.startsWith('www.')) {
+            normalizedDomain = normalizedDomain.substring(4);
+        }
+        
+        // Only add if we haven't seen this domain yet
+        if (!seenDomains.has(normalizedDomain)) {
+            seenDomains.add(normalizedDomain);
+            processedUrls.push(formattedUrl);
+        }
+    });
+    
+    // Add each URL as a list item
+    processedUrls.forEach(url => {
+        const listItem = document.createElement('li');
+        listItem.className = 'website-list-item';
+        
+        const link = document.createElement('a');
+        link.href = url;
+        link.className = 'website-list-link';
+        
+        // Format the display text to be more readable (remove protocol for display only)
+        let displayText = url;
+        if (displayText.toLowerCase().startsWith('https://')) {
+            displayText = displayText.substring(8);
+        } else if (displayText.toLowerCase().startsWith('http://')) {
+            displayText = displayText.substring(7);
+        }
+        
+        // Remove trailing slash for cleaner display
+        displayText = displayText.replace(/\/$/, '');
+        
+        link.textContent = displayText;
+        link.target = '_blank';
+        
+        listItem.appendChild(link);
+        websiteList.appendChild(listItem);
+    });
+    
+    // Show the modal
+    websiteModal.style.display = 'flex';
+}
 
 // Fetch data from Google Sheets
 async function fetchSheetData(silent = false) {
@@ -63,25 +248,7 @@ async function tryAllDataSources(silent = false) {
     const firstSuccess = results.find(result => result.status === 'fulfilled' && result.value && result.value.length > 0);
     
     if (firstSuccess) {
-        const data = firstSuccess.value;
-        console.log(`Data source successful with ${data.length} rows of data`);
-        
-        // Debug: How many rows appear to be entirely N/A
-        if (!silent) {
-            const totalRowsWithNA = data.filter(row => {
-                // Count how many fields are N/A in this row
-                const naFieldCount = Object.values(row).filter(val => 
-                    val === 'N/A' || val === '' || val === null
-                ).length;
-                
-                // Return true if almost all fields are N/A (allowing for row number)
-                return naFieldCount >= Object.keys(row).length - 2;
-            }).length;
-            
-            console.log(`Detected ${totalRowsWithNA} rows that are mostly N/A values`);
-        }
-        
-        return data;
+        return firstSuccess.value;
     }
     
     // If all failed, throw an error
@@ -274,17 +441,9 @@ function processPublishedJSONP(data) {
             }
         }
         
-        // Check if the row has any meaningful content beyond N/A values
-        // Only include rows where at least one field has actual content
-        const hasActualContent = Object.values(result).some(value => {
-            return typeof value === 'string' && 
-                   value.trim() !== '' && 
-                   value.trim() !== 'N/A' &&
-                   value !== result.rowNumber; // rowNumber is not actual content
-        });
-        
-        // Only keep rows with actual content (not just N/A placeholders)
-        if (hasActualContent) {
+        // Keep all rows with actual content (don't filter out N/A)
+        // Only skip completely empty rows
+        if (row.c.some(cell => cell && cell.v)) {
             processedRows.push(result);
         }
     });
@@ -297,7 +456,8 @@ function processPublishedJSONP(data) {
 // Extract value from a cell in JSONP data
 function getValueFromCell(cell) {
     if (!cell || !cell.v) return 'N/A';
-    return String(cell.v).trim() || 'N/A';
+    // Use our sanitizeField function to handle any special characters
+    return sanitizeField(String(cell.v));
 }
 
 // Process CSV data from JSONP
@@ -312,128 +472,151 @@ function parseCSV(csvText) {
     updateLoadingMessage('Processing spreadsheet data...');
     const startTime = performance.now();
     
-    const lines = csvText.split('\n');
-    
-    if (lines.length < 2) {
-        console.error('Not enough lines in CSV data');
-        return [];
-    }
-    
-    const headers = lines[0].split(',').map(header => header.trim().replace(/^"|"$/g, ''));
-    console.log('CSV Headers:', headers);
-    
-    // Find indices for our columns of interest
-    const winnerIndex = headers.findIndex(h => h.toLowerCase().includes('winner') && !h.toLowerCase().includes('form'));
-    const twitchIndex = headers.findIndex(h => h.toLowerCase().includes('twitch'));
-    const discordIndex = headers.findIndex(h => h.toLowerCase().includes('discord'));
-    const websiteIndex = headers.findIndex(h => h.toLowerCase().includes('website'));
-    const giveawayIndex = headers.findIndex(h => h.toLowerCase().includes('giveaway') && !h.toLowerCase().includes('pictures'));
-    const discountIndex = headers.findIndex(h => h.toLowerCase().includes('discount'));
-    const shipsFromIndex = headers.findIndex(h => h.toLowerCase().includes('ships from') || h.toLowerCase().includes('where item ships from'));
-    const shippingIndex = headers.findIndex(h => h.toLowerCase().includes('shipping') && !h.toLowerCase().includes('ships from'));
-    const picturesIndex = headers.findIndex(h => h.toLowerCase().includes('giveaway pictures'));
-    
-    console.log('CSV column indices:', {
-        winnerIndex,
-        twitchIndex,
-        discordIndex,
-        websiteIndex,
-        giveawayIndex,
-        discountIndex,
-        shipsFromIndex,
-        shippingIndex,
-        picturesIndex
-    });
-    
-    if (winnerIndex === -1 || giveawayIndex === -1) {
-        console.error('Required columns "Winner" or "Giveaway" not found in CSV');
-    }
-    
-    // Estimate rows for progress updates
-    const totalRows = lines.length - 1;
-    const updateFrequency = Math.max(1, Math.floor(totalRows / 5)); // Update 5 times during processing
-    
-    // Parse data rows
-    const data = [];
-    let keywordCounter = {}; // Track occurrences of important keywords for debugging
-    
-    for (let i = 1; i < lines.length; i++) {
-        // Show progress updates during parsing for large datasets
-        if (i % updateFrequency === 0 || i === lines.length - 1) {
-            const percent = Math.round((i / totalRows) * 100);
-            updateLoadingMessage(`Processing data... ${percent}% (${i}/${totalRows} rows)`);
+    try {
+        // Pre-process CSV text to fix issues with newlines in quoted fields
+        const preprocessedCSV = preprocessCSV(csvText);
+        
+        const lines = preprocessedCSV.split('\n');
+        
+        if (lines.length < 2) {
+            console.error('Not enough lines in CSV data');
+            return [];
         }
         
-        // Calculate the actual spreadsheet row number (header is row 1, data starts at row 2)
-        const spreadsheetRowNumber = i + 1;
+        // Log raw header line to help diagnose issues
+        console.log('Raw CSV header line:', lines[0]);
         
-        if (!lines[i].trim()) {
-            continue;
+        // Parse headers - handle escaped quotes and special characters properly
+        const headerRow = parseCSVRow(lines[0]);
+        const headers = headerRow.map(header => sanitizeField(header, ''));
+        console.log('Processed CSV Headers:', headers);
+        
+        // Find indices for our columns of interest
+        const winnerIndex = headers.findIndex(h => h.toLowerCase().includes('winner') && !h.toLowerCase().includes('form'));
+        const twitchIndex = headers.findIndex(h => h.toLowerCase().includes('twitch'));
+        const discordIndex = headers.findIndex(h => h.toLowerCase().includes('discord'));
+        const websiteIndex = headers.findIndex(h => h.toLowerCase().includes('website'));
+        const giveawayIndex = headers.findIndex(h => h.toLowerCase().includes('giveaway') && !h.toLowerCase().includes('pictures'));
+        const discountIndex = headers.findIndex(h => h.toLowerCase().includes('discount'));
+        const shipsFromIndex = headers.findIndex(h => h.toLowerCase().includes('ships from') || h.toLowerCase().includes('where item ships from'));
+        const shippingIndex = headers.findIndex(h => h.toLowerCase().includes('shipping') && !h.toLowerCase().includes('ships from'));
+        const picturesIndex = headers.findIndex(h => h.toLowerCase().includes('giveaway pictures'));
+        
+        console.log('CSV column indices:', {
+            winnerIndex,
+            twitchIndex,
+            discordIndex,
+            websiteIndex,
+            giveawayIndex,
+            discountIndex,
+            shipsFromIndex,
+            shippingIndex,
+            picturesIndex
+        });
+        
+        if (winnerIndex === -1 || giveawayIndex === -1) {
+            console.error('Required columns "Winner" or "Giveaway" not found in CSV');
         }
         
-        // Handle quoted fields with commas inside them
-        const row = parseCSVRow(lines[i]);
+        // Estimate rows for progress updates
+        const totalRows = lines.length - 1;
+        const updateFrequency = Math.max(1, Math.floor(totalRows / 5)); // Update 5 times during processing
         
-        // Check if row is valid
-        if (!row || row.length === 0) {
-            continue;
-        }
+        // Parse data rows
+        const data = [];
+        let keywordCounter = {}; // Track occurrences of important keywords for debugging
+        let parsingErrors = 0;
         
-        // Extract key fields for more inclusive filtering - accept ANY content
-        const rowData = {
-            rowNumber: spreadsheetRowNumber, // Store the exact spreadsheet row number
-            winner: (winnerIndex >= 0 && winnerIndex < row.length && row[winnerIndex]?.replace(/^"|"$/g, '')) || 'N/A',
-            twitch: (twitchIndex >= 0 && twitchIndex < row.length && row[twitchIndex]?.replace(/^"|"$/g, '')) || 'N/A',
-            discord: (discordIndex >= 0 && discordIndex < row.length && row[discordIndex]?.replace(/^"|"$/g, '')) || 'N/A',
-            website: (websiteIndex >= 0 && websiteIndex < row.length && row[websiteIndex]?.replace(/^"|"$/g, '')) || 'N/A',
-            giveaway: (giveawayIndex >= 0 && giveawayIndex < row.length && row[giveawayIndex]?.replace(/^"|"$/g, '')) || 'N/A',
-            discount: (discountIndex >= 0 && discountIndex < row.length && row[discountIndex]?.replace(/^"|"$/g, '')) || 'N/A',
-            shipsFrom: (shipsFromIndex >= 0 && shipsFromIndex < row.length && row[shipsFromIndex]?.replace(/^"|"$/g, '')) || 'N/A',
-            shipping: (shippingIndex >= 0 && shippingIndex < row.length && row[shippingIndex]?.replace(/^"|"$/g, '')) || 'N/A',
-            pictureUrl: (picturesIndex >= 0 && picturesIndex < row.length && row[picturesIndex]?.replace(/^"|"$/g, '')) || ''
-        };
-        
-        // Only track keywords for the first few rows to avoid excessive logging
-        if (i < 50) {
-            // Track occurrences of keywords for debugging
-            for (const [key, value] of Object.entries(rowData)) {
-                if (typeof value === 'string') {
-                    const lowerValue = value.toLowerCase();
-                    // Track occurrences of specific keywords
-                    const keywordsToTrack = ['techjeeper', 'boosted', 'spark'];
-                    keywordsToTrack.forEach(keyword => {
-                        if (lowerValue.includes(keyword)) {
-                            keywordCounter[keyword] = (keywordCounter[keyword] || 0) + 1;
-                            console.log(`CSV: Found "${keyword}" in row ${spreadsheetRowNumber}, field: ${key}, value: ${value}`);
+        for (let i = 1; i < lines.length; i++) {
+            // Show progress updates during parsing for large datasets
+            if (i % updateFrequency === 0 || i === lines.length - 1) {
+                const percent = Math.round((i / totalRows) * 100);
+                updateLoadingMessage(`Processing data... ${percent}% (${i}/${totalRows} rows)`);
+            }
+            
+            // Calculate the actual spreadsheet row number (header is row 1, data starts at row 2)
+            const spreadsheetRowNumber = i + 1;
+            
+            if (!lines[i].trim()) {
+                continue;
+            }
+            
+            try {
+                // Handle quoted fields with commas inside them
+                const row = parseCSVRow(lines[i]);
+                
+                // Check if row is valid
+                if (!row || row.length === 0) {
+                    continue;
+                }
+                
+                // Extract key fields for more inclusive filtering - accept ANY content
+                const rowData = {
+                    rowNumber: spreadsheetRowNumber, // Store the exact spreadsheet row number
+                    winner: sanitizeField(winnerIndex >= 0 && winnerIndex < row.length ? row[winnerIndex] : null),
+                    twitch: sanitizeField(twitchIndex >= 0 && twitchIndex < row.length ? row[twitchIndex] : null),
+                    discord: sanitizeField(discordIndex >= 0 && discordIndex < row.length ? row[discordIndex] : null),
+                    website: sanitizeField(websiteIndex >= 0 && websiteIndex < row.length ? row[websiteIndex] : null),
+                    giveaway: sanitizeField(giveawayIndex >= 0 && giveawayIndex < row.length ? row[giveawayIndex] : null),
+                    discount: sanitizeField(discountIndex >= 0 && discountIndex < row.length ? row[discountIndex] : null),
+                    shipsFrom: sanitizeField(shipsFromIndex >= 0 && shipsFromIndex < row.length ? row[shipsFromIndex] : null), 
+                    shipping: sanitizeField(shippingIndex >= 0 && shippingIndex < row.length ? row[shippingIndex] : null),
+                    pictureUrl: sanitizeField(picturesIndex >= 0 && picturesIndex < row.length ? row[picturesIndex] : null, '')
+                };
+                
+                // Only track keywords for the first few rows to avoid excessive logging
+                if (i < 50) {
+                    // Track occurrences of keywords for debugging
+                    for (const [key, value] of Object.entries(rowData)) {
+                        if (typeof value === 'string') {
+                            const lowerValue = value.toLowerCase();
+                            // Track occurrences of specific keywords
+                            const keywordsToTrack = ['techjeeper', 'boosted', 'spark'];
+                            keywordsToTrack.forEach(keyword => {
+                                if (lowerValue.includes(keyword)) {
+                                    keywordCounter[keyword] = (keywordCounter[keyword] || 0) + 1;
+                                    console.log(`CSV: Found "${keyword}" in row ${spreadsheetRowNumber}, field: ${key}, value: ${value}`);
+                                }
+                            });
                         }
-                    });
+                    }
+                }
+                
+                // Keep all rows with actual content (don't filter out N/A)
+                // Only skip completely empty rows
+                if (row.some(cell => cell && cell.trim && cell.trim() !== '')) {
+                    data.push(rowData);
+                }
+            } catch (e) {
+                // Log parsing errors but continue processing
+                parsingErrors++;
+                console.error(`Error parsing row ${spreadsheetRowNumber}:`, e);
+                console.error('Row content:', lines[i]);
+                
+                // If there are too many errors, something is seriously wrong - stop processing
+                if (parsingErrors > 10) {
+                    console.error('Too many parsing errors, aborting CSV processing');
+                    break;
                 }
             }
         }
         
-        // Check if the row has any meaningful content beyond N/A values
-        // Only include rows where at least one field has actual content
-        const hasActualContent = Object.values(rowData).some(value => {
-            return typeof value === 'string' && 
-                   value.trim() !== '' && 
-                   value.trim() !== 'N/A' &&
-                   value !== rowData.rowNumber; // rowNumber is not actual content
-        });
-        
-        // Only keep rows with actual content (not just N/A placeholders)
-        if (hasActualContent) {
-            data.push(rowData);
+        console.log('CSV Keyword counter:', keywordCounter);
+        console.log(`Total CSV rows loaded: ${data.length}`);
+        if (parsingErrors > 0) {
+            console.warn(`Encountered ${parsingErrors} parsing errors while processing CSV`);
         }
+        
+        // Log parsing performance
+        const parseTime = ((performance.now() - startTime) / 1000).toFixed(1);
+        console.log(`CSV parsing completed in ${parseTime} seconds`);
+        
+        return data;
+    } catch (err) {
+        console.error('Critical error during CSV parsing:', err);
+        console.error('First 100 chars of CSV data:', csvText.substring(0, 100) + '...');
+        return [];
     }
-    
-    console.log('CSV Keyword counter:', keywordCounter);
-    console.log(`Total CSV rows loaded: ${data.length}`);
-    
-    // Log parsing performance
-    const parseTime = ((performance.now() - startTime) / 1000).toFixed(1);
-    console.log(`CSV parsing completed in ${parseTime} seconds`);
-    
-    return data;
 }
 
 // Parse a CSV row handling quoted fields with commas
@@ -444,19 +627,105 @@ function parseCSVRow(line) {
     
     for (let i = 0; i < line.length; i++) {
         const char = line[i];
+        const nextChar = i < line.length - 1 ? line[i + 1] : '';
         
         if (char === '"') {
+            // Handle escaped quotes (two double quotes in a row)
+            if (inQuotes && nextChar === '"') {
+                currentField += '"'; // Add a single quote to the field
+                i++; // Skip the next quote character
+                continue;
+            }
             inQuotes = !inQuotes;
         } else if (char === ',' && !inQuotes) {
+            // End of field - save field and start a new one
             result.push(currentField);
             currentField = '';
         } else {
-            currentField += char;
+            // Normal character - add to current field
+            // Preserve newlines inside quoted fields, but normalize them
+            if ((char === '\n' || char === '\r') && inQuotes) {
+                // Normalize newlines to space to avoid multi-line issues
+                currentField += ' ';
+                // Skip the \r\n sequence (Windows newlines)
+                if (char === '\r' && nextChar === '\n') {
+                    i++;
+                }
+            } else {
+                currentField += char;
+            }
         }
     }
     
+    // Add the last field
     result.push(currentField);
-    return result;
+    
+    // Check for unbalanced quotes - if we end with inQuotes=true, quotes are unbalanced
+    if (inQuotes) {
+        console.warn('Unbalanced quotes detected in CSV row:', line);
+        // Try to repair the row - add closing quotes and hope for the best
+        currentField += '"';
+    }
+    
+    // Clean up each field - remove wrapping quotes and trim whitespace
+    return result.map(field => {
+        field = field.trim();
+        // Handle fields with unbalanced quotes (missing closing quote)
+        if (field.startsWith('"') && !field.endsWith('"')) {
+            field += '"';
+        }
+        // Remove wrapping quotes if they exist (but keep internal quotes)
+        if (field.startsWith('"') && field.endsWith('"') && field.length >= 2) {
+            field = field.substring(1, field.length - 1);
+        }
+        // Unescape any double-double quotes
+        return field.replace(/""/g, '"');
+    });
+}
+
+// Sanitize a field value from CSV, handling various edge cases
+function sanitizeField(value, defaultValue = 'N/A') {
+    // Handle null, undefined, or empty values
+    if (value === null || value === undefined || value === '') {
+        return defaultValue;
+    }
+    
+    // Convert to string if it's not already
+    let str = String(value);
+    
+    // Trim whitespace
+    str = str.trim();
+    
+    // Return default for blank strings
+    if (str === '') {
+        return defaultValue;
+    }
+    
+    // Remove wrapping quotes if they exist
+    if (str.startsWith('"') && str.endsWith('"') && str.length >= 2) {
+        str = str.substring(1, str.length - 1);
+    }
+    
+    // Handle escaped quotes (replace "" with ")
+    str = str.replace(/""/g, '"');
+    
+    // Handle newlines and other problematic characters
+    str = str.replace(/[\r\n]+/g, ' '); // Replace newlines with spaces
+    
+    // Handle HTML entities that might be in the CSV
+    str = str.replace(/&amp;/g, '&')
+             .replace(/&lt;/g, '<')
+             .replace(/&gt;/g, '>')
+             .replace(/&quot;/g, '"')
+             .replace(/&#39;/g, "'");
+    
+    // Fix common problems with parentheses
+    if (str.includes('(') && !str.includes(')')) {
+        str += ')'; // Add closing parenthesis if missing
+    }
+    
+    // Return sanitized value
+    return str;
 }
 
 // Set table loading state
@@ -528,27 +797,12 @@ function displayGiveaways(giveaways) {
         return aRow - bRow;
     });
     
-    // Filter out rows that are entirely or almost entirely N/A
-    const filteredGiveaways = giveaways.filter(giveaway => {
-        // Count how many fields are N/A in this row
-        const naFieldCount = Object.values(giveaway).filter(val => 
-            val === 'N/A' || val === '' || val === null
-        ).length;
-        
-        // Make sure we have at least 2 meaningful fields (not just rowNumber)
-        return naFieldCount < Object.keys(giveaway).length - 2;
-    });
-    
-    if (filteredGiveaways.length !== giveaways.length) {
-        console.log(`Filtered out ${giveaways.length - filteredGiveaways.length} rows that were mostly N/A values`);
-    }
-    
     // Keep track of the first available row
     let firstAvailableRow = null;
     let firstAvailableRowIndex = -1;
     
     // Add each giveaway as a row in the table
-    filteredGiveaways.forEach((giveaway, index) => {
+    giveaways.forEach((giveaway, index) => {
         const row = document.createElement('tr');
         
         // Normalize winner field for consistent checking (handle capitalization, whitespace)
@@ -608,14 +862,57 @@ function displayGiveaways(giveaways) {
         const websiteCell = document.createElement('td');
         if (giveaway.website && giveaway.website !== 'N/A') {
             const link = document.createElement('a');
-            link.href = giveaway.website.startsWith('http') ? giveaway.website : `https://${giveaway.website}`;
             link.title = giveaway.website; // Show the URL in a tooltip
             link.className = 'website-icon';
-            link.target = '_blank';
-            // Use Font Awesome icon
-            const icon = document.createElement('i');
-            icon.className = 'fas fa-link';
-            link.appendChild(icon);
+            
+            // Check if website field contains multiple URLs
+            const hasMultipleUrls = containsMultipleUrls(giveaway.website);
+            
+            if (hasMultipleUrls) {
+                // Set up click handler for multiple URLs
+                link.href = 'javascript:void(0)'; // Prevent default navigation
+                link.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    const urls = extractUrls(giveaway.website);
+                    showWebsiteLinksModal(urls, `${giveaway.twitch}'s Links`);
+                });
+                
+                // Use a different icon to indicate multiple links
+                const icon = document.createElement('i');
+                icon.className = 'fas fa-link fa-stack-1x';
+                
+                // Create small badge to indicate multiple links
+                const iconWrapper = document.createElement('span');
+                iconWrapper.className = 'fa-stack';
+                iconWrapper.title = 'Multiple Links Available';
+                
+                const badge = document.createElement('i');
+                badge.className = 'fas fa-circle fa-stack-2x';
+                badge.style.color = 'rgba(0, 0, 0, 0.15)';
+                badge.style.fontSize = '0.6em';
+                badge.style.transform = 'translate(0.7em, -0.5em)';
+                
+                const badgeText = document.createElement('i');
+                badgeText.className = 'fas fa-plus fa-stack-1x';
+                badgeText.style.color = 'var(--rainbow-3)';
+                badgeText.style.fontSize = '0.5em';
+                badgeText.style.transform = 'translate(1.4em, -1em)';
+                
+                iconWrapper.appendChild(icon);
+                iconWrapper.appendChild(badge);
+                iconWrapper.appendChild(badgeText);
+                link.appendChild(iconWrapper);
+            } else {
+                // Single URL - normal behavior
+                link.href = giveaway.website.startsWith('http') ? giveaway.website : `https://${giveaway.website}`;
+                link.target = '_blank';
+                
+                // Use Font Awesome icon
+                const icon = document.createElement('i');
+                icon.className = 'fas fa-link';
+                link.appendChild(icon);
+            }
+            
             websiteCell.appendChild(link);
         } else {
             websiteCell.textContent = '';
@@ -1127,6 +1424,36 @@ function stopAutoUpdate() {
         autoUpdateInterval = null;
         console.log('Auto-update stopped');
     }
+}
+
+// Add a new function to preprocess the CSV data
+function preprocessCSV(csvText) {
+    // Handle possible newline issues in quoted fields
+    // This is a complex problem, so we'll use a regex-based approach
+    
+    // Pattern to match fields enclosed in quotes that might contain newlines
+    const quotedFieldPattern = /"([^"]|"")*"/g;
+    
+    // Replace newlines within quoted fields with a space
+    let processedText = csvText;
+    let match;
+    while ((match = quotedFieldPattern.exec(csvText)) !== null) {
+        const quotedField = match[0];
+        if (quotedField.includes('\n') || quotedField.includes('\r')) {
+            // Replace newlines with spaces inside this quoted field
+            const cleanedField = quotedField.replace(/[\r\n]+/g, ' ');
+            // Replace the original field with the cleaned one
+            processedText = processedText.replace(quotedField, cleanedField);
+            
+            // Log this for debugging
+            console.log('Fixed field with newlines:', { 
+                original: quotedField.substring(0, 30) + '...', 
+                cleaned: cleanedField.substring(0, 30) + '...' 
+            });
+        }
+    }
+    
+    return processedText;
 }
 
 // Start the app when DOM is loaded

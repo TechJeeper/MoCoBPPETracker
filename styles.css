@@ -360,6 +360,7 @@ th:nth-child(10), td:nth-child(10) { /* Pictures */
     font-size: 0.8rem;
 }
 
+/* Website icon styles */
 .website-icon {
     color: var(--rainbow-2);
     font-size: 1.2rem;
@@ -368,6 +369,16 @@ th:nth-child(10), td:nth-child(10) { /* Pictures */
 
 .website-icon:hover {
     color: var(--rainbow-light-2);
+}
+
+/* Multiple URLs icon styles */
+.website-icon .fa-stack {
+    font-size: 1em;
+    margin-left: -0.2em;
+}
+
+.website-icon:hover .fa-plus {
+    color: var(--rainbow-light-3) !important;
 }
 
 .discord-link {
@@ -624,4 +635,111 @@ th:nth-child(10), td:nth-child(10) { /* Pictures */
 html, body {
     min-width: 1024px;
     overflow-x: auto;
+}
+
+/* Website Link Modal Popup */
+.website-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    transition: opacity 0.3s ease;
+}
+
+.website-modal-content {
+    background-color: var(--card-bg);
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    max-width: 600px;
+    width: 90%;
+    padding: 25px;
+    position: relative;
+    max-height: 80vh;
+    overflow-y: auto;
+    animation: modalFadeIn 0.3s;
+    border: 1px solid var(--border-color);
+}
+
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.website-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.website-modal-title {
+    font-size: 1.3rem;
+    font-weight: bold;
+    color: var(--primary-text-color);
+}
+
+.website-modal-close {
+    cursor: pointer;
+    font-size: 1.5rem;
+    color: var(--secondary-text-color);
+    background: none;
+    border: none;
+    padding: 0;
+    transition: color 0.2s;
+}
+
+.website-modal-close:hover {
+    color: var(--primary-text-color);
+}
+
+.website-list {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+.website-list-item {
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.website-list-item:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.website-list-link {
+    color: var(--rainbow-2);
+    text-decoration: none;
+    display: block;
+    word-break: break-all;
+    font-size: 1rem;
+    padding: 10px;
+    transition: all 0.3s;
+    border-radius: 6px;
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.website-list-link:hover {
+    background-color: var(--hover-bg);
+    color: var(--rainbow-light-2);
+    transform: translateX(5px);
 } 
