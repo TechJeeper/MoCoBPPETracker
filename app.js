@@ -14,6 +14,8 @@ const searchInput = document.getElementById('searchInput');
 // Fetch data from Google Sheets
 async function fetchSheetData() {
     try {
+        // Show a loading message with status updates
+        updateLoadingMessage('Connecting to data source...');
         return await tryAllDataSources();
     } catch (error) {
         console.error('All data fetch methods failed:', error);
@@ -22,29 +24,72 @@ async function fetchSheetData() {
     }
 }
 
+// Update the loading message
+function updateLoadingMessage(message) {
+    const loadingText = loadingContainer.querySelector('p') || document.createElement('p');
+    loadingText.textContent = message;
+    if (!loadingText.parentNode) {
+        loadingContainer.appendChild(loadingText);
+    }
+}
+
 // Try all possible data sources
 async function tryAllDataSources() {
-    // First try the direct CSV approach with AllOrigins - this seems to work best
+    // Try multiple methods concurrently with a race condition
+    updateLoadingMessage('Fetching data (this may take a moment)...');
+    
+    // Define all data source methods we can try
+    const dataSources = [
+        fetchDirectCSV(),
+        fetchWithCORSProxies(),
+        fetchWithJSONP('csv').catch(e => null) // Make sure JSONP won't throw
+    ];
+    
+    // Try them all at once and take the first one that succeeds
+    const results = await Promise.allSettled(dataSources);
+    
+    // Find the first fulfilled result
+    const firstSuccess = results.find(result => result.status === 'fulfilled' && result.value && result.value.length > 0);
+    
+    if (firstSuccess) {
+        return firstSuccess.value;
+    }
+    
+    // If all failed, throw an error
+    throw new Error('All data fetch methods failed');
+}
+
+// Try the direct CSV approach with AllOrigins
+async function fetchDirectCSV() {
     try {
         console.log('Trying direct CSV export with AllOrigins (preferred method)...');
+        updateLoadingMessage('Connecting to AllOrigins...');
+        
         const csvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&id=${SHEET_ID}`;
         const response = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(csvUrl), {
             method: 'GET',
-            mode: 'cors'
+            mode: 'cors',
+            // Add a shorter timeout for fetch using AbortController
+            signal: AbortSignal.timeout(10000) // 10 second timeout
         });
         
         if (response.ok) {
+            updateLoadingMessage('Processing data...');
             const csvText = await response.text();
             console.log('CSV data fetched successfully via AllOrigins');
             return parseCSV(csvText);
         } else {
             console.log('AllOrigins CSV method failed with status:', response.status);
+            return null;
         }
     } catch (e) {
         console.log('Direct AllOrigins CSV method failed:', e);
+        return null;
     }
+}
 
-    // Try using other CORS proxies for the CSV export
+// Try using other CORS proxies for the CSV export
+async function fetchWithCORSProxies() {
     const corsProxies = [
         'https://corsproxy.io/?',
         'https://cors-anywhere.herokuapp.com/'
@@ -52,37 +97,39 @@ async function tryAllDataSources() {
     
     const csvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&id=${SHEET_ID}`;
     
-    // Try each additional CORS proxy
-    for (const proxy of corsProxies) {
-        try {
-            console.log(`Trying CSV with proxy: ${proxy}...`);
-            const response = await fetch(proxy + encodeURIComponent(csvUrl), {
-                method: 'GET',
-                mode: 'cors'
-            });
-            
-            if (response.ok) {
-                const csvText = await response.text();
-                console.log(`CSV data fetched successfully via ${proxy}`);
-                return parseCSV(csvText);
+    // Try all proxies concurrently
+    const proxyPromises = corsProxies.map(proxy => {
+        return new Promise(async (resolve) => {
+            try {
+                console.log(`Trying CSV with proxy: ${proxy}...`);
+                updateLoadingMessage(`Trying alternate data source...`);
+                
+                const response = await fetch(proxy + encodeURIComponent(csvUrl), {
+                    method: 'GET',
+                    mode: 'cors',
+                    // Add a shorter timeout for fetch using AbortController
+                    signal: AbortSignal.timeout(8000) // 8 second timeout
+                });
+                
+                if (response.ok) {
+                    const csvText = await response.text();
+                    console.log(`CSV data fetched successfully via ${proxy}`);
+                    resolve(parseCSV(csvText));
+                } else {
+                    console.log(`CORS proxy ${proxy} failed with status:`, response.status);
+                    resolve(null);
+                }
+            } catch (e) {
+                console.log(`CORS proxy ${proxy} failed:`, e);
+                resolve(null);
             }
-        } catch (e) {
-            console.log(`CORS proxy ${proxy} failed:`, e);
-        }
-    }
+        });
+    });
     
-    // Try the JSONP approach
-    try {
-        console.log('Trying JSONP method...');
-        const result = await fetchWithJSONP();
-        console.log('JSONP method succeeded');
-        return result;
-    } catch (e) {
-        console.log('JSONP method failed:', e);
-    }
-    
-    // If all methods fail, throw an error
-    throw new Error('All data fetch methods failed');
+    // Wait for all proxies to finish and return the first successful result
+    const results = await Promise.all(proxyPromises);
+    const successfulResult = results.find(result => result && result.length > 0);
+    return successfulResult || null;
 }
 
 // Fetch data using JSONP to bypass CORS
@@ -135,7 +182,7 @@ function fetchWithJSONP(method = 'csv') {
                 document.body.removeChild(script);
                 reject(new Error('JSONP request timed out'));
             }
-        }, 5000); // 10 second timeout
+        }, 5000); // 5 second timeout (reduced from 10 seconds)
     });
 }
 
@@ -216,9 +263,12 @@ function processCSVJSONP(data) {
     return parseCSV(data);
 }
 
-// Parse CSV data with similar improvements
+// Parse CSV data with optimization for better performance
 function parseCSV(csvText) {
-    console.log('Attempting to parse CSV data');
+    console.log('Parsing CSV data');
+    updateLoadingMessage('Processing spreadsheet data...');
+    const startTime = performance.now();
+    
     const lines = csvText.split('\n');
     
     if (lines.length < 2) {
@@ -256,11 +306,21 @@ function parseCSV(csvText) {
         console.error('Required columns "Winner" or "Giveaway" not found in CSV');
     }
     
+    // Estimate rows for progress updates
+    const totalRows = lines.length - 1;
+    const updateFrequency = Math.max(1, Math.floor(totalRows / 5)); // Update 5 times during processing
+    
     // Parse data rows
     const data = [];
     let keywordCounter = {}; // Track occurrences of important keywords for debugging
     
     for (let i = 1; i < lines.length; i++) {
+        // Show progress updates during parsing for large datasets
+        if (i % updateFrequency === 0 || i === lines.length - 1) {
+            const percent = Math.round((i / totalRows) * 100);
+            updateLoadingMessage(`Processing data... ${percent}% (${i}/${totalRows} rows)`);
+        }
+        
         // Calculate the actual spreadsheet row number (header is row 1, data starts at row 2)
         const spreadsheetRowNumber = i + 1;
         
@@ -290,18 +350,21 @@ function parseCSV(csvText) {
             pictureUrl: (picturesIndex >= 0 && picturesIndex < row.length && row[picturesIndex]?.replace(/^"|"$/g, '')) || ''
         };
         
-        // Track occurrences of keywords for debugging
-        for (const [key, value] of Object.entries(rowData)) {
-            if (typeof value === 'string') {
-                const lowerValue = value.toLowerCase();
-                // Track occurrences of specific keywords
-                const keywordsToTrack = ['techjeeper', 'boosted', 'spark'];
-                keywordsToTrack.forEach(keyword => {
-                    if (lowerValue.includes(keyword)) {
-                        keywordCounter[keyword] = (keywordCounter[keyword] || 0) + 1;
-                        console.log(`CSV: Found "${keyword}" in row ${spreadsheetRowNumber}, field: ${key}, value: ${value}`);
-                    }
-                });
+        // Only track keywords for the first few rows to avoid excessive logging
+        if (i < 50) {
+            // Track occurrences of keywords for debugging
+            for (const [key, value] of Object.entries(rowData)) {
+                if (typeof value === 'string') {
+                    const lowerValue = value.toLowerCase();
+                    // Track occurrences of specific keywords
+                    const keywordsToTrack = ['techjeeper', 'boosted', 'spark'];
+                    keywordsToTrack.forEach(keyword => {
+                        if (lowerValue.includes(keyword)) {
+                            keywordCounter[keyword] = (keywordCounter[keyword] || 0) + 1;
+                            console.log(`CSV: Found "${keyword}" in row ${spreadsheetRowNumber}, field: ${key}, value: ${value}`);
+                        }
+                    });
+                }
             }
         }
         
@@ -314,6 +377,11 @@ function parseCSV(csvText) {
     
     console.log('CSV Keyword counter:', keywordCounter);
     console.log(`Total CSV rows loaded: ${data.length}`);
+    
+    // Log parsing performance
+    const parseTime = ((performance.now() - startTime) / 1000).toFixed(1);
+    console.log(`CSV parsing completed in ${parseTime} seconds`);
+    
     return data;
 }
 
@@ -560,7 +628,15 @@ function displayGiveaways(giveaways) {
 
 // Show error message
 function showError(message) {
-    loadingContainer.innerHTML = `<p class="error" style="color: red; font-weight: bold;">${message}</p>`;
+    const errorElement = document.createElement('p');
+    errorElement.className = 'error';
+    errorElement.style.color = 'red';
+    errorElement.style.fontWeight = 'bold';
+    errorElement.textContent = message;
+    
+    // Clear existing content and add error
+    loadingContainer.innerHTML = '';
+    loadingContainer.appendChild(errorElement);
 }
 
 // Filter giveaways based on search term
@@ -626,9 +702,14 @@ async function initApp() {
     // Don't set table loading state here
     
     try {
-        // Get data
+        // Show more detailed loading status
+        updateLoadingMessage('Starting data fetch process...');
+        
+        // Get data with progress updates
+        const startTime = performance.now();
         let giveaways = await fetchSheetData();
-        console.log(`Fetched ${giveaways.length} giveaways from the sheet`);
+        const loadTime = ((performance.now() - startTime) / 1000).toFixed(1);
+        console.log(`Fetched ${giveaways.length} giveaways from the sheet in ${loadTime} seconds`);
         
         // Store original data in a global variable to ensure we always have the full dataset
         window.allGiveaways = [...giveaways];
