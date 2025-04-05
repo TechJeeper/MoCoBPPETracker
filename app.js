@@ -74,7 +74,7 @@ async function fetchDirectCSV() {
         });
         
         if (response.ok) {
-            updateLoadingMessage('Processing data...');
+            updateLoadingMessage('LOADING BIG PP ENERGY...');
             const csvText = await response.text();
             console.log('CSV data fetched successfully via AllOrigins');
             return parseCSV(csvText);
