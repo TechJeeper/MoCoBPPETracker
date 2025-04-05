@@ -63,7 +63,25 @@ async function tryAllDataSources(silent = false) {
     const firstSuccess = results.find(result => result.status === 'fulfilled' && result.value && result.value.length > 0);
     
     if (firstSuccess) {
-        return firstSuccess.value;
+        const data = firstSuccess.value;
+        console.log(`Data source successful with ${data.length} rows of data`);
+        
+        // Debug: How many rows appear to be entirely N/A
+        if (!silent) {
+            const totalRowsWithNA = data.filter(row => {
+                // Count how many fields are N/A in this row
+                const naFieldCount = Object.values(row).filter(val => 
+                    val === 'N/A' || val === '' || val === null
+                ).length;
+                
+                // Return true if almost all fields are N/A (allowing for row number)
+                return naFieldCount >= Object.keys(row).length - 2;
+            }).length;
+            
+            console.log(`Detected ${totalRowsWithNA} rows that are mostly N/A values`);
+        }
+        
+        return data;
     }
     
     // If all failed, throw an error
@@ -256,9 +274,17 @@ function processPublishedJSONP(data) {
             }
         }
         
-        // Keep all rows with actual content (don't filter out N/A)
-        // Only skip completely empty rows
-        if (row.c.some(cell => cell && cell.v)) {
+        // Check if the row has any meaningful content beyond N/A values
+        // Only include rows where at least one field has actual content
+        const hasActualContent = Object.values(result).some(value => {
+            return typeof value === 'string' && 
+                   value.trim() !== '' && 
+                   value.trim() !== 'N/A' &&
+                   value !== result.rowNumber; // rowNumber is not actual content
+        });
+        
+        // Only keep rows with actual content (not just N/A placeholders)
+        if (hasActualContent) {
             processedRows.push(result);
         }
     });
@@ -385,9 +411,17 @@ function parseCSV(csvText) {
             }
         }
         
-        // Keep all rows with actual content (don't filter out N/A)
-        // Only skip completely empty rows
-        if (row.some(cell => cell && cell.trim && cell.trim() !== '')) {
+        // Check if the row has any meaningful content beyond N/A values
+        // Only include rows where at least one field has actual content
+        const hasActualContent = Object.values(rowData).some(value => {
+            return typeof value === 'string' && 
+                   value.trim() !== '' && 
+                   value.trim() !== 'N/A' &&
+                   value !== rowData.rowNumber; // rowNumber is not actual content
+        });
+        
+        // Only keep rows with actual content (not just N/A placeholders)
+        if (hasActualContent) {
             data.push(rowData);
         }
     }
@@ -494,12 +528,27 @@ function displayGiveaways(giveaways) {
         return aRow - bRow;
     });
     
+    // Filter out rows that are entirely or almost entirely N/A
+    const filteredGiveaways = giveaways.filter(giveaway => {
+        // Count how many fields are N/A in this row
+        const naFieldCount = Object.values(giveaway).filter(val => 
+            val === 'N/A' || val === '' || val === null
+        ).length;
+        
+        // Make sure we have at least 2 meaningful fields (not just rowNumber)
+        return naFieldCount < Object.keys(giveaway).length - 2;
+    });
+    
+    if (filteredGiveaways.length !== giveaways.length) {
+        console.log(`Filtered out ${giveaways.length - filteredGiveaways.length} rows that were mostly N/A values`);
+    }
+    
     // Keep track of the first available row
     let firstAvailableRow = null;
     let firstAvailableRowIndex = -1;
     
     // Add each giveaway as a row in the table
-    giveaways.forEach((giveaway, index) => {
+    filteredGiveaways.forEach((giveaway, index) => {
         const row = document.createElement('tr');
         
         // Normalize winner field for consistent checking (handle capitalization, whitespace)
