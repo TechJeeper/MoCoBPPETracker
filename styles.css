@@ -1,0 +1,452 @@
+/* Main color scheme - black background with purple accents */
+:root {
+    --main-bg-color: #121212;
+    --secondary-bg-color: #1e1e1e;
+    --accent-color: #9b4dca;
+    --accent-light: #c490e4;
+    --text-color: #f0f0f0;
+    --secondary-text-color: #cccccc;
+    --border-color: #333333;
+    --hover-bg-color: #2c2c2c;
+    --completed-color: #666666;
+    --completed-bg: #191919;
+    --completed-hover-bg: #232323;
+    --row-highlight-color: rgba(155, 77, 202, 0.15);
+}
+
+/* Global styles */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: var(--main-bg-color);
+    color: var(--text-color);
+    line-height: 1.6;
+}
+
+a {
+    color: var(--accent-color);
+    text-decoration: none;
+}
+
+a:hover {
+    color: var(--accent-light);
+    text-decoration: underline;
+}
+
+/* Header styles */
+.header {
+    background-color: var(--secondary-bg-color);
+    padding: 1rem;
+    text-align: center;
+    border-bottom: 1px solid var(--border-color);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.header h1 {
+    margin: 0;
+    font-size: 1.6rem;
+    color: var(--accent-color);
+}
+
+.header p {
+    margin: 0.5rem 0 0;
+    font-size: 0.9rem;
+    color: var(--secondary-text-color);
+}
+
+/* Filter container */
+.filter-container {
+    position: relative;
+    background-color: var(--secondary-bg-color);
+    padding: 0.8rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* Search box and clear button */
+.search-box {
+    display: flex;
+    justify-content: center;
+    margin: 0 auto;
+    max-width: 600px;
+    position: relative;
+}
+
+#searchInput {
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    width: 100%;
+    background-color: var(--main-bg-color);
+    color: var(--text-color);
+    padding-right: 35px; /* Make room for the clear button */
+}
+
+#searchInput:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 2px rgba(155, 77, 202, 0.25);
+}
+
+.search-clear-btn {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--secondary-text-color);
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    transition: all 0.2s;
+}
+
+.search-clear-btn:hover {
+    background-color: rgba(155, 77, 202, 0.2);
+    color: var(--accent-color);
+}
+
+/* Hide the clear button when input is empty (using JavaScript to toggle) */
+.search-clear-btn.hidden {
+    display: none;
+}
+
+/* Loading and error states */
+.loading-container {
+    text-align: center;
+    padding: 2rem;
+    color: var(--secondary-text-color);
+}
+
+.loading-spinner {
+    border: 4px solid var(--border-color);
+    border-top: 4px solid var(--accent-color);
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.error {
+    color: #ff6b6b;
+    font-weight: bold;
+}
+
+/* Table container */
+.table-container {
+    max-width: 100%;
+    overflow-x: auto;
+    padding: 0;
+    max-height: 70vh;
+    overflow-y: auto;
+    background-color: var(--main-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    margin: 0.5rem;
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent-color) var(--secondary-bg-color);
+    position: relative;
+}
+
+.table-container::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.table-container::-webkit-scrollbar-track {
+    background: var(--secondary-bg-color);
+}
+
+.table-container::-webkit-scrollbar-thumb {
+    background-color: var(--accent-color);
+    border-radius: 4px;
+}
+
+/* Table styles */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+thead {
+    position: sticky;
+    top: 0;
+    background-color: var(--secondary-bg-color);
+    z-index: 1;
+}
+
+th {
+    background-color: var(--secondary-bg-color);
+    color: var(--accent-color);
+    font-weight: bold;
+    padding: 10px 6px;
+    text-align: left;
+    border-bottom: 2px solid var(--accent-color);
+}
+
+td {
+    padding: 8px 6px;
+    border-bottom: 1px solid var(--border-color);
+    vertical-align: middle;
+    word-wrap: break-word;
+}
+
+tr:hover {
+    background-color: var(--hover-bg-color);
+}
+
+/* Column widths */
+th:nth-child(1), td:nth-child(1) { /* Row # */
+    min-width: 30px;
+    width: 3%;
+    max-width: 40px;
+    text-align: center;
+}
+
+th:nth-child(2), td:nth-child(2) { /* Winner */
+    min-width: 60px;
+    width: 7%;
+    max-width: 90px;
+}
+
+th:nth-child(3), td:nth-child(3) { /* Twitch */
+    min-width: 60px;
+    width: 7%;
+    max-width: 90px;
+}
+
+th:nth-child(4), td:nth-child(4) { /* Discord */
+    min-width: 60px;
+    width: 7%;
+    max-width: 90px;
+}
+
+th:nth-child(5), td:nth-child(5) { /* Website */
+    min-width: 60px;
+    width: 5%;
+    max-width: 60px;
+    text-align: center;
+}
+
+th:nth-child(6), td:nth-child(6) { /* Giveaway */
+    min-width: 100px;
+    width: 14%;
+    max-width: 140px;
+}
+
+th:nth-child(7), td:nth-child(7) { /* Discount */
+    min-width: 80px;
+    width: 10%;
+    max-width: 120px;
+}
+
+th:nth-child(8), td:nth-child(8) { /* Ships From */
+    min-width: 50px;
+    width: 6%;
+    max-width: 90px;
+}
+
+th:nth-child(9), td:nth-child(9) { /* Shipping */
+    min-width: 80px;
+    width: 10%;
+    max-width: 120px;
+}
+
+th:nth-child(10), td:nth-child(10) { /* Pictures */
+    min-width: 50px;
+    width: 5%;
+    max-width: 70px;
+    text-align: center;
+}
+
+/* Link styles */
+.website-link {
+    display: inline-block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.8rem;
+}
+
+.website-icon {
+    color: var(--accent-color);
+    font-size: 1.2rem;
+}
+
+.website-icon:hover {
+    color: var(--accent-light);
+}
+
+.discord-link {
+    display: inline-block;
+    background-color: var(--accent-color);
+    color: white !important;
+    border-radius: 3px;
+    padding: 3px 6px;
+    text-decoration: none;
+    font-size: 0.75rem;
+    white-space: nowrap;
+}
+
+.discord-link:hover {
+    background-color: var(--accent-light);
+    text-decoration: none;
+}
+
+/* No results message */
+#no-results {
+    text-align: center;
+    padding: 2rem;
+    color: var(--secondary-text-color);
+    display: none;
+}
+
+/* Completed giveaway styles */
+.completed-giveaway {
+    color: var(--completed-color);
+    background-color: var(--completed-bg);
+}
+
+.completed-giveaway:hover {
+    background-color: var(--completed-hover-bg);
+}
+
+/* First available giveaway styles */
+.first-available {
+    position: relative;
+    animation: highlight-pulse 2s ease-in-out;
+}
+
+@keyframes highlight-pulse {
+    0% { background-color: var(--row-highlight-color); }
+    70% { background-color: var(--row-highlight-color); }
+    100% { background-color: transparent; }
+}
+
+/* Scroll hint */
+.scroll-hint {
+    text-align: center;
+    padding: 5px;
+    margin-top: 5px;
+    color: var(--accent-light);
+    font-size: 0.8rem;
+    opacity: 0.8;
+    animation: fade-in-out 2s infinite;
+}
+
+.scroll-hint.fade-out {
+    animation: fade-out 0.5s forwards;
+}
+
+@keyframes fade-in-out {
+    0% { opacity: 0.5; }
+    50% { opacity: 1; }
+    100% { opacity: 0.5; }
+}
+
+@keyframes fade-out {
+    from { opacity: 0.8; }
+    to { opacity: 0; }
+}
+
+/* For smaller screens */
+@media (max-width: 900px) {
+    th, td {
+        padding: 6px 4px;
+        font-size: 0.85rem;
+    }
+    
+    .header h1 {
+        font-size: 1.3rem;
+    }
+    
+    .header p {
+        font-size: 0.8rem;
+    }
+}
+
+/* Refresh button */
+.refresh-container {
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.refresh-btn {
+    background-color: var(--accent-color);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.refresh-btn:hover {
+    background-color: var(--accent-light);
+    transform: rotate(45deg);
+}
+
+.refresh-btn:active {
+    transform: scale(0.95) rotate(45deg);
+}
+
+.refresh-btn:disabled {
+    opacity: 0.7;
+    cursor: wait;
+}
+
+/* Table loading state */
+.table-loading {
+    position: relative;
+    filter: blur(3px);
+    pointer-events: none;
+}
+
+.table-loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(18, 18, 18, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+}
+
+.table-spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid rgba(155, 77, 202, 0.2);
+    border-radius: 50%;
+    border-top: 4px solid var(--accent-color);
+    animation: table-spin 1s linear infinite;
+}
+
+@keyframes table-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+} 

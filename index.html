@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MoCo BPPE2025 Tracker</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Add Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="header">
+        <h1>MoCo BPPE2025 Tracker</h1>
+        <p>Track available and completed giveaways from the <a id="sheet-link" href="#" target="_blank">BPPE 2025 Public Sheet</a></p>
+    </div>
+    
+    <div class="filter-container">
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="Search giveaways, makers, or regions...">
+        </div>
+    </div>
+    
+    <div class="loading-container">
+        <div class="loading-spinner"></div>
+        <p>Loading giveaways...</p>
+    </div>
+    
+    <div class="table-container">
+        <table id="giveaways-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Winner</th>
+                    <th>Twitch</th>
+                    <th>Discord</th>
+                    <th><i class="fas fa-globe"></i></th>
+                    <th>Giveaway</th>
+                    <th>Discount</th>
+                    <th>Ships From</th>
+                    <th>Shipping</th>
+                    <th>Pictures</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Table rows will be added by JavaScript -->
+            </tbody>
+        </table>
+        <div id="no-results">No giveaways found matching your search.</div>
+    </div>
+    
+    <script src="app.js"></script>
+</body>
+</html> 
