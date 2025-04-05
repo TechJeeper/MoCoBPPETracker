@@ -531,7 +531,7 @@ function parseCSV(csvText) {
             // Show progress updates during parsing for large datasets
             if (i % updateFrequency === 0 || i === lines.length - 1) {
                 const percent = Math.round((i / totalRows) * 100);
-                updateLoadingMessage(`Processing data... ${percent}% (${i}/${totalRows} rows)`);
+                updateLoadingMessage(`HARNESSING THE BIG PP ENERGY...`);
             }
             
             // Calculate the actual spreadsheet row number (header is row 1, data starts at row 2)
