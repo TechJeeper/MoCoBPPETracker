@@ -516,22 +516,45 @@ function displayGiveaways(giveaways) {
         tableBody.appendChild(row);
     });
     
-    // Scroll to the first available row if there is one
-    if (firstAvailableRow) {
-        console.log(`Scrolling to first available row at index ${firstAvailableRowIndex}`);
-        // Use a small delay to ensure the table is fully rendered
-        setTimeout(() => {
-            firstAvailableRow.scrollIntoView({ 
-                behavior: 'smooth', 
-                block: 'center' 
-            });
-            // Remove loading state after scrolling completes
-            setTimeout(() => setTableLoading(false), 300);
-        }, 500);
+    // For initial load (during app initialization), we want to proceed differently
+    // Use a flag to determine if this is the first display after app startup
+    const isFirstLoad = !window.hasDisplayedData;
+    window.hasDisplayedData = true;
+    
+    if (isFirstLoad) {
+        // On first load, we immediately remove the table loading spinner to avoid double spinners
+        setTableLoading(false);
+        
+        // Scroll to the first available row if there is one, after a delay
+        if (firstAvailableRow) {
+            console.log(`First load: Scrolling to first available row at index ${firstAvailableRowIndex}`);
+            setTimeout(() => {
+                firstAvailableRow.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center'
+                });
+            }, 500);
+        } else {
+            console.log('No available row found to scroll to');
+        }
     } else {
-        console.log('No available row found to scroll to');
-        // Remove loading state with a small delay for visual feedback
-        setTimeout(() => setTableLoading(false), 300);
+        // For subsequent loads (search/filter), use the original timing
+        if (firstAvailableRow) {
+            console.log(`Subsequent load: Scrolling to first available row at index ${firstAvailableRowIndex}`);
+            // Use a small delay to ensure the table is fully rendered
+            setTimeout(() => {
+                firstAvailableRow.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'center' 
+                });
+                // Remove loading state after scrolling completes
+                setTimeout(() => setTableLoading(false), 300);
+            }, 500);
+        } else {
+            console.log('No available row found to scroll to');
+            // Remove loading state with a small delay for visual feedback
+            setTimeout(() => setTableLoading(false), 300);
+        }
     }
 }
 
@@ -599,8 +622,8 @@ async function initApp() {
         sheetLink.href = SHEET_URL;
     }
     
-    // Set initial loading state for table
-    setTableLoading(true);
+    // Main loading indicator is sufficient for initial load
+    // Don't set table loading state here
     
     try {
         // Get data
@@ -639,7 +662,7 @@ async function initApp() {
             }
         }
         
-        // Hide loading indicator
+        // Hide loading indicator before displaying giveaways
         loadingContainer.style.display = 'none';
         
         // Display giveaways initially
