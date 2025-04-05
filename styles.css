@@ -222,6 +222,7 @@ a:hover {
 
 /* Table container */
 .table-container {
+    min-width: 900px;
     max-width: 100%;
     overflow-x: auto;
     padding: 0;
@@ -442,7 +443,8 @@ th:nth-child(10), td:nth-child(10) { /* Pictures */
     to { opacity: 0; }
 }
 
-/* For smaller screens */
+/* For smaller screens - disabled to force desktop view on mobile */
+/* 
 @media (max-width: 900px) {
     th, td {
         padding: 6px 4px;
@@ -457,6 +459,7 @@ th:nth-child(10), td:nth-child(10) { /* Pictures */
         font-size: 0.8rem;
     }
 }
+*/
 
 /* Refresh button */
 .refresh-container {
@@ -615,4 +618,10 @@ th:nth-child(10), td:nth-child(10) { /* Pictures */
 @keyframes heartbeat {
     0%, 100% { transform: scale(1); }
     50% { transform: scale(1.1); }
+}
+
+/* Force desktop view for all devices */
+html, body {
+    min-width: 1024px;
+    overflow-x: auto;
 } 
