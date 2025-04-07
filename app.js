@@ -7,7 +7,7 @@ const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit?gid=0
 
 // Variables for auto-update feature
 let autoUpdateInterval = null;
-const AUTO_UPDATE_INTERVAL_MS = 60000; // 60 seconds
+const AUTO_UPDATE_INTERVAL_MS = 30000; // Reduced to 30 seconds (from 60) for more frequent updates
 let lastDataChecksum = ''; // Used to determine if data has changed
 
 // DOM Elements
@@ -208,7 +208,30 @@ async function fetchSheetData(silent = false) {
         if (!silent) {
             updateLoadingMessage('Connecting to data source...');
         }
-        return await tryAllDataSources(silent);
+        
+        // Add retry mechanism for auto-update silent mode
+        let attempts = silent ? 3 : 1; // More retries for silent mode (auto-update)
+        let lastError = null;
+        
+        for (let i = 0; i < attempts; i++) {
+            try {
+                const data = await tryAllDataSources(silent);
+                if (data && data.length > 0) {
+                    return data; // Success
+                }
+            } catch (error) {
+                console.warn(`Data fetch attempt ${i+1}/${attempts} failed:`, error);
+                lastError = error;
+                
+                // Wait before retry
+                if (i < attempts - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+            }
+        }
+        
+        // If we got here, all attempts failed
+        throw lastError || new Error('Failed to fetch data after multiple attempts');
     } catch (error) {
         console.error('All data fetch methods failed:', error);
         if (!silent) {
@@ -1333,14 +1356,23 @@ function setupTableScrollIndicator() {
 function calculateDataChecksum(data) {
     if (!data || data.length === 0) return '';
     
-    // Create a string with relevant data for the first 10 rows (enough to detect most changes)
-    // This is more efficient than checking the entire dataset
-    const sampleSize = Math.min(data.length, 10);
+    // Create a string with relevant data for more rows (enough to detect most changes)
+    // This makes the checksum more robust to detect changes anywhere in the data
+    const sampleSize = Math.min(data.length, 20); // Increased from 10 to 20 for better coverage
     let checksumString = '';
     
     for (let i = 0; i < sampleSize; i++) {
         const row = data[i];
         checksumString += `${row.winner}|${row.giveaway}|${row.twitch}|${row.discord}|`;
+    }
+    
+    // Add some rows from the end too (to detect changes at the end of the sheet)
+    if (data.length > sampleSize) {
+        const endSampleSize = Math.min(5, data.length - sampleSize);
+        for (let i = data.length - endSampleSize; i < data.length; i++) {
+            const row = data[i];
+            checksumString += `end:${row.winner}|${row.giveaway}|`;
+        }
     }
     
     // Add the total number of rows to catch additions/deletions
@@ -1373,21 +1405,31 @@ function startAutoUpdate() {
         }
         
         console.log('Running auto-update check...');
+        const startTime = performance.now();
+        
         try {
             // Fetch data without showing loading indicators
             const freshData = await fetchSheetData(true);
+            
+            // Ensure we have data before proceeding
+            if (!freshData || freshData.length === 0) {
+                console.error('Auto-update received empty data');
+                return;
+            }
+            
             const newChecksum = calculateDataChecksum(freshData);
+            console.log(`Auto-update data fetch complete: ${freshData.length} rows loaded in ${((performance.now() - startTime) / 1000).toFixed(2)}s`);
+            console.log(`Current checksum: ${lastDataChecksum}, New checksum: ${newChecksum}`);
             
             // Compare checksums to see if data changed
             if (newChecksum !== lastDataChecksum && lastDataChecksum !== '') {
-                console.log('Data change detected, refreshing...');
+                console.log('Data change detected, refreshing display...');
                 
                 // Show subtle loading indication
                 setTableLoading(true);
                 
                 // Update the global dataset and display
                 window.allGiveaways = [...freshData];
-                console.log(`Auto-refreshed data: ${freshData.length} rows loaded`);
                 
                 // Display all rows (or filtered if search is active)
                 const searchValue = searchInput.value.trim();
@@ -1403,11 +1445,13 @@ function startAutoUpdate() {
                 setTimeout(() => {
                     refreshButton.classList.remove('auto-updated');
                 }, 1000);
+                
+                console.log(`Auto-update display refresh completed in ${((performance.now() - startTime) / 1000).toFixed(2)}s`);
             } else {
                 console.log('No data changes detected');
             }
             
-            // Update checksum
+            // Always update the checksum with the latest data
             lastDataChecksum = newChecksum;
         } catch (error) {
             console.error('Auto-update check failed:', error);

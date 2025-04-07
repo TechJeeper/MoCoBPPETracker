@@ -1,5 +1,3 @@
-[Check out the MoCo BPPE2025 Shop Tracker Here](https://bppe.techjeeper.com/)
-
 # BPPE 2025 Giveaways Showcase
 
 A web interface that displays data from a Google Sheet, showing giveaway information for the BPPE 2025 event in a visually pleasing format.
