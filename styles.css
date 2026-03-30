@@ -1,19 +1,25 @@
-/* Main color scheme - modern dark MoCoMade aesthetic */
+/* Main color scheme - MoCoMade neon purple theme based on Partner Party */
 :root {
-    --main-bg-color: #0d0d0d;
-    --secondary-bg-color: #161616;
-    --accent-color: linear-gradient(90deg, #a8a8a8, #eaeaea);
+    --main-bg-color: #05000a;
+    --secondary-bg-color: #110517;
+    --accent-color: linear-gradient(90deg, #b366ff, #d9a6ff);
     --text-color: #f0f0f0;
-    --secondary-text-color: #a0a0a0;
-    --border-color: #2a2a2a;
-    --hover-bg-color: #222222;
-    --row-highlight-color: rgba(200, 200, 200, 0.1);
+    --secondary-text-color: #cda2e8;
+    --border-color: #2b1138;
+    --hover-bg-color: #1a0a24;
+    --row-highlight-color: rgba(179, 102, 255, 0.15);
     
     /* Core theme colors */
+    --moco-neon-purple: #b366ff;
+    --moco-neon-light: #d9a6ff;
+    --moco-neon-glow: rgba(179, 102, 255, 0.6);
     --moco-white: #ffffff;
-    --moco-light: #d1d1d1;
-    --moco-gray: #7a7a7a;
-    --moco-dark: #333333;
+    --moco-light: #e0d0f0;
+    --moco-gray: #6b4d80;
+    --moco-dark: #200a30;
+    --completed-bg: #09030d;
+    --completed-color: #665577;
+    --completed-hover-bg: #12071a;
 }
 
 /* Global styles */
@@ -54,6 +60,8 @@ a:hover {
     font-weight: 800;
     text-transform: uppercase;
     color: var(--moco-white);
+    text-shadow: 0 0 10px var(--moco-neon-glow), 0 0 20px var(--moco-neon-purple);
+    font-family: 'Courier New', Courier, monospace;
 }
 
 .header p {
@@ -125,7 +133,7 @@ a:hover {
     padding: 8px 16px;
     background-color: var(--moco-dark);
     color: var(--moco-white);
-    border: 1px solid var(--moco-gray);
+    border: 1px solid var(--moco-neon-purple);
     border-radius: 4px;
     cursor: pointer;
     font-weight: 600;
@@ -133,11 +141,13 @@ a:hover {
     display: flex;
     align-items: center;
     gap: 8px;
+    box-shadow: 0 0 8px rgba(179, 102, 255, 0.4);
 }
 
 .export-btn:hover {
-    background-color: var(--moco-white);
-    color: var(--main-bg-color);
+    background-color: var(--moco-neon-purple);
+    color: var(--moco-white);
+    box-shadow: 0 0 15px var(--moco-neon-purple);
 }
 
 /* Hide the clear button when input is empty (using JavaScript to toggle) */
@@ -419,6 +429,13 @@ th:nth-child(8), td:nth-child(8) { /* Country */
 
 .completed-giveaway:hover {
     background-color: var(--completed-hover-bg);
+}
+
+/* Winner text */
+.winner-text {
+    font-weight: bold;
+    color: var(--moco-neon-light);
+    text-shadow: 0 0 5px var(--moco-neon-glow);
 }
 
 /* First available giveaway styles */

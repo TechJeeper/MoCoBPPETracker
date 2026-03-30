@@ -3,7 +3,7 @@ const DEFAULT_SHEET_ID = '1TOxnFwsMiDwZ5T-yClsEVQui7KbDj_r-UKD977OkczE';
 // Check if a sheet ID was passed in the URL (e.g., ?sheet=XXXXX)
 const urlParams = new URLSearchParams(window.location.search);
 const SHEET_ID = urlParams.get('sheet') || DEFAULT_SHEET_ID;
-const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit?gid=0#gid=0`;
+const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit?gid=1253812108#gid=1253812108`;
 
 // Visited shops tracking (using rowNumber as unique ID)
 const VISITED_STORAGE_KEY = 'moco_bppe_visited_shops';
@@ -311,7 +311,7 @@ async function fetchDirectCSV(silent = false) {
             updateLoadingMessage('Connecting to AllOrigins...');
         }
         
-        const csvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&id=${SHEET_ID}`;
+        const csvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=1253812108&id=${SHEET_ID}`;
         const response = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(csvUrl), {
             method: 'GET',
             mode: 'cors',
@@ -343,7 +343,7 @@ async function fetchWithCORSProxies(silent = false) {
         'https://cors-anywhere.herokuapp.com/'
     ];
     
-    const csvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&id=${SHEET_ID}`;
+    const csvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=1253812108&id=${SHEET_ID}`;
     
     // Try all proxies concurrently
     const proxyPromises = corsProxies.map(proxy => {
@@ -406,10 +406,10 @@ function fetchWithJSONP(method = 'csv') {
         let url;
         if (method === 'published') {
             // For public published sheets
-            url = `https://docs.google.com/spreadsheets/d/e/2PACX-${SHEET_ID}/pubhtml?gid=0&single=true&output=json&callback=${callbackName}`;
+            url = `https://docs.google.com/spreadsheets/d/e/2PACX-${SHEET_ID}/pubhtml?gid=1253812108&single=true&output=json&callback=${callbackName}`;
         } else {
             // For direct CSV access via a CORS proxy
-            url = `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`)}`;
+            url = `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=1253812108`)}`;
         }
         
         // Create and append the script tag
@@ -463,12 +463,16 @@ function processPublishedJSONP(data) {
         // Extract key fields for more inclusive filtering - accept ANY content
         const result = {
             rowNumber: spreadsheetRowNumber, // Store the exact spreadsheet row number
-            twitch: getValueFromCell(row.c[0]),
-            discord: getValueFromCell(row.c[1]),
-            website: getValueFromCell(row.c[2]),
-            goodsType: getValueFromCell(row.c[3]),
-            discount: getValueFromCell(row.c[4]),
-            country: getValueFromCell(row.c[5])
+            shoutout: getValueFromCell(row.c[0]),
+            twitch: getValueFromCell(row.c[1]),
+            discord: getValueFromCell(row.c[2]),
+            website: getValueFromCell(row.c[3]),
+            goodsType: getValueFromCell(row.c[4]),
+            giveaway: getValueFromCell(row.c[5]),
+            discount: getValueFromCell(row.c[6]),
+            country: getValueFromCell(row.c[7]),
+            shipping: getValueFromCell(row.c[8]),
+            winner: getValueFromCell(row.c[9])
         };
         
         
@@ -523,20 +527,28 @@ function parseCSV(csvText) {
         console.log('Processed CSV Headers:', headers);
         
         // Find indices for our columns of interest
+        const shoutoutIndex = headers.findIndex(h => h.toLowerCase().includes('shoutout'));
         const twitchIndex = headers.findIndex(h => h.toLowerCase().includes('twitch'));
         const discordIndex = headers.findIndex(h => h.toLowerCase().includes('discord'));
         const websiteIndex = headers.findIndex(h => h.toLowerCase().includes('website'));
         const goodsTypeIndex = headers.findIndex(h => h.toLowerCase().includes('type of goods'));
+        const giveawayIndex = headers.findIndex(h => h.toLowerCase().includes('giveaway'));
         const discountIndex = headers.findIndex(h => h.toLowerCase().includes('discount'));
         const countryIndex = headers.findIndex(h => h.toLowerCase().includes('country'));
+        const shippingIndex = headers.findIndex(h => h.toLowerCase().includes('shipping'));
+        const winnerIndex = headers.findIndex(h => h.toLowerCase().includes('winner'));
         
         console.log('CSV column indices:', {
+            shoutoutIndex,
             twitchIndex,
             discordIndex,
             websiteIndex,
             goodsTypeIndex,
+            giveawayIndex,
             discountIndex,
-            countryIndex
+            countryIndex,
+            shippingIndex,
+            winnerIndex
         });
         
         if (discordIndex === -1 && twitchIndex === -1) {
@@ -578,12 +590,16 @@ function parseCSV(csvText) {
                 // Extract key fields for more inclusive filtering - accept ANY content
                 const rowData = {
                     rowNumber: spreadsheetRowNumber, // Store the exact spreadsheet row number
+                    shoutout: sanitizeField(shoutoutIndex >= 0 && shoutoutIndex < row.length ? row[shoutoutIndex] : null),
                     twitch: sanitizeField(twitchIndex >= 0 && twitchIndex < row.length ? row[twitchIndex] : null),
                     discord: sanitizeField(discordIndex >= 0 && discordIndex < row.length ? row[discordIndex] : null),
                     website: sanitizeField(websiteIndex >= 0 && websiteIndex < row.length ? row[websiteIndex] : null),
                     goodsType: sanitizeField(goodsTypeIndex >= 0 && goodsTypeIndex < row.length ? row[goodsTypeIndex] : null),
+                    giveaway: sanitizeField(giveawayIndex >= 0 && giveawayIndex < row.length ? row[giveawayIndex] : null),
                     discount: sanitizeField(discountIndex >= 0 && discountIndex < row.length ? row[discountIndex] : null),
-                    country: sanitizeField(countryIndex >= 0 && countryIndex < row.length ? row[countryIndex] : null)
+                    country: sanitizeField(countryIndex >= 0 && countryIndex < row.length ? row[countryIndex] : null),
+                    shipping: sanitizeField(shippingIndex >= 0 && shippingIndex < row.length ? row[shippingIndex] : null),
+                    winner: sanitizeField(winnerIndex >= 0 && winnerIndex < row.length ? row[winnerIndex] : null)
                 };
                 
                 
@@ -807,6 +823,14 @@ function displayShops(Shops) {
     Shops.forEach((Shop, index) => {
         const row = document.createElement('tr');
         
+        // Normalize winner field
+        const normalizedWinner = Shop.winner ? Shop.winner.trim().toUpperCase() : '';
+        const hasWinner = normalizedWinner && normalizedWinner !== 'N/A';
+
+        if (hasWinner) {
+            row.classList.add('completed-giveaway');
+        }
+
         // Row number column - always use the original spreadsheet row number
         const rowNumCell = document.createElement('td');
         rowNumCell.textContent = Shop.rowNumber || (index + 1);
@@ -826,6 +850,14 @@ function displayShops(Shops) {
         });
         visitCell.appendChild(checkbox);
         row.appendChild(visitCell);
+
+        // Winner column
+        const winnerCell = document.createElement('td');
+        winnerCell.textContent = Shop.winner || '';
+        if (hasWinner) {
+            winnerCell.classList.add('winner-text');
+        }
+        row.appendChild(winnerCell);
         
         // Twitch Name column
         const twitchCell = document.createElement('td');
@@ -898,10 +930,10 @@ function displayShops(Shops) {
         }
         row.appendChild(websiteCell);
         
-        // Type of Goods column
-        const goodsCell = document.createElement('td');
-        goodsCell.textContent = Shop.goodsType;
-        row.appendChild(goodsCell);
+        // Giveaway column
+        const giveawayCell = document.createElement('td');
+        giveawayCell.textContent = Shop.giveaway || '';
+        row.appendChild(giveawayCell);
         
         // Discount column
         const discountCell = document.createElement('td');
@@ -910,9 +942,14 @@ function displayShops(Shops) {
         
         // Country column
         const countryCell = document.createElement('td');
-        countryCell.textContent = Shop.country;
+        countryCell.textContent = Shop.country || '';
         row.appendChild(countryCell);
         
+        // Shipping column
+        const shippingCell = document.createElement('td');
+        shippingCell.textContent = Shop.shipping || '';
+        row.appendChild(shippingCell);
+
         // Add the complete row to the table
         tableBody.appendChild(row);
     });
