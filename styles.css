@@ -1,31 +1,19 @@
-/* Main color scheme - black background with rainbow accents */
+/* Main color scheme - modern dark MoCoMade aesthetic */
 :root {
-    --main-bg-color: #121212;
-    --secondary-bg-color: #1e1e1e;
-    --accent-color: linear-gradient(90deg, #ff0066, #ff9900, #33cc33, #00ccff, #9933ff);
-    --accent-light: linear-gradient(90deg, #ff5599, #ffbb33, #66dd66, #66ddff, #bb66ff);
+    --main-bg-color: #0d0d0d;
+    --secondary-bg-color: #161616;
+    --accent-color: linear-gradient(90deg, #a8a8a8, #eaeaea);
     --text-color: #f0f0f0;
-    --secondary-text-color: #cccccc;
-    --border-color: #333333;
-    --hover-bg-color: #2c2c2c;
-    --completed-color: #666666;
-    --completed-bg: #191919;
-    --completed-hover-bg: #232323;
-    --row-highlight-color: rgba(0, 204, 255, 0.15);
+    --secondary-text-color: #a0a0a0;
+    --border-color: #2a2a2a;
+    --hover-bg-color: #222222;
+    --row-highlight-color: rgba(200, 200, 200, 0.1);
     
-    /* Rainbow colors for various elements */
-    --rainbow-1: #ff0066;
-    --rainbow-2: #ff9900;
-    --rainbow-3: #33cc33;
-    --rainbow-4: #00ccff;
-    --rainbow-5: #9933ff;
-    
-    /* Light rainbow colors */
-    --rainbow-light-1: #ff5599;
-    --rainbow-light-2: #ffbb33;
-    --rainbow-light-3: #66dd66;
-    --rainbow-light-4: #66ddff;
-    --rainbow-light-5: #bb66ff;
+    /* Core theme colors */
+    --moco-white: #ffffff;
+    --moco-light: #d1d1d1;
+    --moco-gray: #7a7a7a;
+    --moco-dark: #333333;
 }
 
 /* Global styles */
@@ -39,55 +27,33 @@ body {
 }
 
 a {
-    color: var(--rainbow-4);
-    text-decoration: none;
-    transition: color 0.3s;
+    color: var(--moco-light);
+    text-decoration: underline;
+    text-decoration-color: var(--moco-gray);
+    transition: all 0.3s ease;
 }
 
 a:hover {
-    color: var(--rainbow-light-2);
-    text-decoration: underline;
+    color: var(--moco-white);
+    text-decoration-color: var(--moco-white);
 }
 
 /* Header styles */
 .header {
     background-color: var(--secondary-bg-color);
-    padding: 1rem;
+    padding: 1.5rem 1rem;
     text-align: center;
     border-bottom: 1px solid var(--border-color);
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
 .header h1 {
     margin: 0;
-    font-size: 1.9rem;
-    background: linear-gradient(to right, var(--rainbow-1), var(--rainbow-2), var(--rainbow-3), var(--rainbow-4), var(--rainbow-5));
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    text-shadow: 0 0 4px var(--rainbow-light-4);
-    animation: rainbow-glow 10s linear infinite;
-}
-
-@keyframes rainbow-glow {
-    0% {
-        text-shadow: 0 0 4px var(--rainbow-light-1);
-    }
-    20% {
-        text-shadow: 0 0 4px var(--rainbow-light-2);
-    }
-    40% {
-        text-shadow: 0 0 4px var(--rainbow-light-3);
-    }
-    60% {
-        text-shadow: 0 0 4px var(--rainbow-light-4);
-    }
-    80% {
-        text-shadow: 0 0 4px var(--rainbow-light-5);
-    }
-    100% {
-        text-shadow: 0 0 4px var(--rainbow-light-1);
-    }
+    font-size: 2.2rem;
+    letter-spacing: 2px;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: var(--moco-white);
 }
 
 .header p {
@@ -125,13 +91,13 @@ a:hover {
 
 #searchInput:focus {
     outline: none;
-    border-color: var(--rainbow-3);
-    box-shadow: 0 0 0 2px rgba(0, 204, 255, 0.25);
+    border-color: var(--moco-white);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
 }
 
 .search-clear-btn {
     position: absolute;
-    right: 10px;
+    right: 110px; /* Make room for the export button */
     top: 50%;
     transform: translateY(-50%);
     background: none;
@@ -149,8 +115,29 @@ a:hover {
 }
 
 .search-clear-btn:hover {
-    background-color: rgba(0, 204, 255, 0.2);
-    color: var(--rainbow-4);
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--moco-white);
+}
+
+/* Export Button */
+.export-btn {
+    margin-left: 10px;
+    padding: 8px 16px;
+    background-color: var(--moco-dark);
+    color: var(--moco-white);
+    border: 1px solid var(--moco-gray);
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.export-btn:hover {
+    background-color: var(--moco-white);
+    color: var(--main-bg-color);
 }
 
 /* Hide the clear button when input is empty (using JavaScript to toggle) */
@@ -181,10 +168,10 @@ a:hover {
 
 .loading-spinner {
     border: 4px solid var(--border-color);
-    border-top: 4px solid var(--rainbow-3);
-    border-right: 4px solid var(--rainbow-1);
-    border-bottom: 4px solid var(--rainbow-5);
-    border-left: 4px solid var(--rainbow-2);
+    border-top: 4px solid var(--moco-white);
+    border-right: 4px solid var(--moco-gray);
+    border-bottom: 4px solid var(--moco-dark);
+    border-left: 4px solid var(--moco-light);
     border-radius: 50%;
     width: 40px;
     height: 40px;
@@ -233,7 +220,7 @@ a:hover {
     border-radius: 4px;
     margin: 0.5rem;
     scrollbar-width: thin;
-    scrollbar-color: var(--rainbow-3) var(--secondary-bg-color);
+    scrollbar-color: var(--moco-gray) var(--secondary-bg-color);
     position: relative;
 }
 
@@ -247,7 +234,7 @@ a:hover {
 }
 
 .table-container::-webkit-scrollbar-thumb {
-    background: linear-gradient(to bottom, var(--rainbow-1), var(--rainbow-3), var(--rainbow-5));
+    background: var(--moco-gray);
     border-radius: 4px;
 }
 
@@ -256,7 +243,7 @@ table {
     width: 100%;
     border-collapse: collapse;
     table-layout: fixed;
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     margin: 0;
 }
 
@@ -269,15 +256,18 @@ thead {
 
 th {
     background-color: var(--secondary-bg-color);
-    color: var(--rainbow-5);
-    font-weight: bold;
-    padding: 10px 6px;
+    color: var(--moco-white);
+    font-weight: 700;
+    padding: 12px 8px;
     text-align: left;
-    border-bottom: 2px solid var(--rainbow-5);
+    border-bottom: 2px solid var(--moco-gray);
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 1px;
 }
 
 td {
-    padding: 8px 6px;
+    padding: 10px 8px;
     border-bottom: 1px solid var(--border-color);
     vertical-align: middle;
     word-wrap: break-word;
@@ -295,60 +285,92 @@ th:nth-child(1), td:nth-child(1) { /* Row # */
     text-align: center;
 }
 
-th:nth-child(2), td:nth-child(2) { /* Winner */
-    min-width: 60px;
-    width: 7%;
-    max-width: 90px;
-}
-
-th:nth-child(3), td:nth-child(3) { /* Twitch */
-    min-width: 60px;
-    width: 7%;
-    max-width: 90px;
-}
-
-th:nth-child(4), td:nth-child(4) { /* Discord */
-    min-width: 60px;
-    width: 7%;
-    max-width: 90px;
-}
-
-th:nth-child(5), td:nth-child(5) { /* Website */
-    min-width: 60px;
+th:nth-child(2), td:nth-child(2) { /* Visit */
+    min-width: 50px;
     width: 5%;
     max-width: 60px;
     text-align: center;
 }
 
-th:nth-child(6), td:nth-child(6) { /* Giveaway */
-    min-width: 100px;
-    width: 14%;
-    max-width: 140px;
+th:nth-child(3), td:nth-child(3) { /* Twitch */
+    min-width: 80px;
+    width: 10%;
+    max-width: 120px;
+}
+
+th:nth-child(4), td:nth-child(4) { /* Discord */
+    min-width: 80px;
+    width: 10%;
+    max-width: 120px;
+}
+
+th:nth-child(5), td:nth-child(5) { /* Website */
+    min-width: 60px;
+    width: 6%;
+    max-width: 80px;
+    text-align: center;
+}
+
+th:nth-child(6), td:nth-child(6) { /* Type of Goods */
+    min-width: 120px;
+    width: 18%;
+    max-width: 200px;
 }
 
 th:nth-child(7), td:nth-child(7) { /* Discount */
+    min-width: 100px;
+    width: 12%;
+    max-width: 150px;
+}
+
+th:nth-child(8), td:nth-child(8) { /* Country */
     min-width: 80px;
     width: 10%;
     max-width: 120px;
 }
 
-th:nth-child(8), td:nth-child(8) { /* Ships From */
-    min-width: 50px;
-    width: 6%;
-    max-width: 90px;
+/* Custom Checkbox */
+.visit-checkbox {
+    appearance: none;
+    -webkit-appearance: none;
+    background-color: transparent;
+    margin: 0;
+    font: inherit;
+    color: currentColor;
+    width: 1.15em;
+    height: 1.15em;
+    border: 2px solid var(--moco-gray);
+    border-radius: 0.15em;
+    display: grid;
+    place-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
 }
 
-th:nth-child(9), td:nth-child(9) { /* Shipping */
-    min-width: 80px;
-    width: 10%;
-    max-width: 120px;
+.visit-checkbox::before {
+    content: "";
+    width: 0.65em;
+    height: 0.65em;
+    transform: scale(0);
+    transition: 120ms transform ease-in-out;
+    box-shadow: inset 1em 1em var(--main-bg-color);
+    background-color: var(--moco-dark);
+    transform-origin: center;
+    clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
 }
 
-th:nth-child(10), td:nth-child(10) { /* Pictures */
-    min-width: 50px;
-    width: 5%;
-    max-width: 70px;
-    text-align: center;
+.visit-checkbox:checked {
+    background-color: var(--moco-white);
+    border-color: var(--moco-white);
+}
+
+.visit-checkbox:checked::before {
+    transform: scale(1);
+}
+
+.visit-checkbox:focus {
+    outline: max(2px, 0.15em) solid var(--moco-gray);
+    outline-offset: max(2px, 0.15em);
 }
 
 /* Link styles */
@@ -362,13 +384,13 @@ th:nth-child(10), td:nth-child(10) { /* Pictures */
 
 /* Website icon styles */
 .website-icon {
-    color: var(--rainbow-2);
+    color: var(--moco-gray);
     font-size: 1.2rem;
     transition: color 0.3s;
 }
 
 .website-icon:hover {
-    color: var(--rainbow-light-2);
+    color: var(--moco-white);
 }
 
 /* Multiple URLs icon styles */
@@ -378,24 +400,7 @@ th:nth-child(10), td:nth-child(10) { /* Pictures */
 }
 
 .website-icon:hover .fa-plus {
-    color: var(--rainbow-light-3) !important;
-}
-
-.discord-link {
-    display: inline-block;
-    background: linear-gradient(90deg, var(--rainbow-5), var(--rainbow-4));
-    color: white !important;
-    border-radius: 3px;
-    padding: 3px 6px;
-    text-decoration: none;
-    font-size: 0.75rem;
-    white-space: nowrap;
-    transition: all 0.3s;
-}
-
-.discord-link:hover {
-    background: linear-gradient(90deg, var(--rainbow-5), var(--rainbow-1));
-    text-decoration: none;
+    color: var(--moco-white) !important;
 }
 
 /* No results message */
@@ -433,7 +438,7 @@ th:nth-child(10), td:nth-child(10) { /* Pictures */
     text-align: center;
     padding: 5px;
     margin-top: 5px;
-    color: var(--rainbow-light-4);
+    color: var(--moco-light);
     font-size: 0.8rem;
     opacity: 0.8;
     animation: fade-in-out 2s infinite;
@@ -486,7 +491,7 @@ th:nth-child(10), td:nth-child(10) { /* Pictures */
     display: flex;
     align-items: center;
     margin-right: 10px;
-    background-color: rgba(0, 204, 255, 0.1);
+    background-color: rgba(255, 255, 255, 0.05);
     padding: 4px 8px;
     border-radius: 4px;
     border: 1px solid var(--border-color);
@@ -502,13 +507,13 @@ th:nth-child(10), td:nth-child(10) { /* Pictures */
 
 .auto-update-checkbox {
     cursor: pointer;
-    accent-color: var(--rainbow-2);
+    accent-color: var(--moco-white);
 }
 
 .refresh-btn {
-    background: linear-gradient(135deg, var(--rainbow-1), var(--rainbow-5));
-    color: white;
-    border: none;
+    background: var(--moco-dark);
+    color: var(--moco-white);
+    border: 1px solid var(--moco-gray);
     border-radius: 50%;
     width: 32px;
     height: 32px;
@@ -521,7 +526,7 @@ th:nth-child(10), td:nth-child(10) { /* Pictures */
 }
 
 .refresh-btn:hover {
-    background: linear-gradient(135deg, var(--rainbow-light-1), var(--rainbow-light-5));
+    background: var(--moco-gray);
     transform: rotate(45deg);
 }
 
@@ -540,9 +545,9 @@ th:nth-child(10), td:nth-child(10) { /* Pictures */
 }
 
 @keyframes auto-update-flash {
-    0% { transform: scale(1); background: linear-gradient(135deg, var(--rainbow-1), var(--rainbow-5)); }
-    50% { transform: scale(1.2); background: linear-gradient(135deg, var(--rainbow-light-1), var(--rainbow-light-5)); box-shadow: 0 0 10px var(--rainbow-light-4); }
-    100% { transform: scale(1); background: linear-gradient(135deg, var(--rainbow-1), var(--rainbow-5)); }
+    0% { transform: scale(1); background: var(--moco-dark); }
+    50% { transform: scale(1.2); background: var(--moco-light); box-shadow: 0 0 10px var(--moco-white); }
+    100% { transform: scale(1); background: var(--moco-dark); }
 }
 
 /* Table loading state */
@@ -577,10 +582,10 @@ th:nth-child(10), td:nth-child(10) { /* Pictures */
 
 .table-spinner {
     border: 3px solid var(--border-color);
-    border-top: 3px solid var(--rainbow-1);
-    border-right: 3px solid var(--rainbow-3);
-    border-bottom: 3px solid var(--rainbow-5);
-    border-left: 3px solid var(--rainbow-2);
+    border-top: 3px solid var(--moco-white);
+    border-right: 3px solid var(--moco-gray);
+    border-bottom: 3px solid var(--moco-dark);
+    border-left: 3px solid var(--moco-light);
     border-radius: 50%;
     width: 30px;
     height: 30px;
@@ -595,9 +600,9 @@ th:nth-child(10), td:nth-child(10) { /* Pictures */
 /* Footer */
 .footer {
     text-align: center;
-    padding: 0.25rem 0;
+    padding: 0.5rem 0;
     margin-top: 0.4rem;
-    color: var(--rainbow-3);
+    color: var(--moco-gray);
     background-color: var(--secondary-bg-color);
     border-top: 1px solid var(--border-color);
 }
@@ -605,22 +610,22 @@ th:nth-child(10), td:nth-child(10) { /* Pictures */
 .footer p {
     margin: 0;
     font-size: 0.8rem;
-    line-height: 1.2;
+    line-height: 1.5;
 }
 
 .footer a {
-    color: var(--rainbow-3);
+    color: var(--moco-white);
     text-decoration: none;
     transition: color 0.3s;
 }
 
 .footer a:hover {
-    color: var(--rainbow-light-3);
+    color: var(--moco-light);
     text-decoration: underline;
 }
 
 .heart {
-    color: #ff4d4d;
+    color: var(--moco-white);
     font-size: 1.2em;
     display: inline-block;
     animation: heartbeat 1.5s infinite;
@@ -727,7 +732,7 @@ html, body {
 }
 
 .website-list-link {
-    color: var(--rainbow-2);
+    color: var(--moco-light);
     text-decoration: none;
     display: block;
     word-break: break-all;
@@ -735,11 +740,11 @@ html, body {
     padding: 10px;
     transition: all 0.3s;
     border-radius: 6px;
-    background-color: rgba(0, 0, 0, 0.05);
+    background-color: rgba(255, 255, 255, 0.05);
 }
 
 .website-list-link:hover {
-    background-color: var(--hover-bg);
-    color: var(--rainbow-light-2);
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--moco-white);
     transform: translateX(5px);
 } 

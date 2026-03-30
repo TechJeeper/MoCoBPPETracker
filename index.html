@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=1024, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <title>MoCo BPPE2025 Shop Tracker</title>
+    <title>MoCo BPPE 2026 Shop Tracker</title>
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
     <link rel="stylesheet" href="styles.css">
@@ -12,13 +12,14 @@
 </head>
 <body>
     <div class="header">
-        <h1>MoCo BPPE2025 Shop Tracker</h1>
-        <p>Track available and completed giveaways from the <a id="sheet-link" href="#" target="_blank">BPPE 2025 Public Sheet</a></p>
+        <h1>MoCo BPPE 2026 Shop Tracker</h1>
+        <p>Track makers and goods from the <a id="sheet-link" href="#" target="_blank">BPPE 2026 Public Sheet</a></p>
     </div>
     
     <div class="filter-container">
         <div class="search-box">
-            <input type="text" id="searchInput" placeholder="Search giveaways, makers, or regions...">
+            <input type="text" id="searchInput" placeholder="Search makers, regions, or goods...">
+            <button id="exportBtn" class="export-btn" title="Export Shopping List"><i class="fas fa-file-export"></i> Export</button>
         </div>
     </div>
     
@@ -28,26 +29,24 @@
     </div>
     
     <div class="table-container">
-        <table id="giveaways-table">
+        <table id="shops-table">
             <thead>
                 <tr>
                     <th>#</th>
-                    <th>Winner</th>
+                    <th>Visit</th>
                     <th>Twitch</th>
                     <th>Discord</th>
-                    <th>Shop</th>
-                    <th>Giveaway</th>
+                    <th>Website</th>
+                    <th>Type of Goods</th>
                     <th>Discount</th>
-                    <th>Ships From</th>
-                    <th>Shipping</th>
-                    <th>Pictures</th>
+                    <th>Country</th>
                 </tr>
             </thead>
             <tbody>
                 <!-- Table rows will be added by JavaScript -->
             </tbody>
         </table>
-        <div id="no-results">No giveaways found matching your search.</div>
+        <div id="no-results">No shops found matching your search.</div>
     </div>
     
     <!-- Modal for multiple website URLs -->

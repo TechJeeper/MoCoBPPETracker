@@ -1,9 +1,34 @@
 // Constants - Default sheet ID with URL parameter override capability
-const DEFAULT_SHEET_ID = '1pM8fMy2IVe_Sj1mBieFpMxO_to0Z6GDcirbUUZwCT9E';
+const DEFAULT_SHEET_ID = '1TOxnFwsMiDwZ5T-yClsEVQui7KbDj_r-UKD977OkczE';
 // Check if a sheet ID was passed in the URL (e.g., ?sheet=XXXXX)
 const urlParams = new URLSearchParams(window.location.search);
 const SHEET_ID = urlParams.get('sheet') || DEFAULT_SHEET_ID;
 const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit?gid=0#gid=0`;
+
+// Visited shops tracking (using rowNumber as unique ID)
+const VISITED_STORAGE_KEY = 'moco_bppe_visited_shops';
+let visitedShops = new Set();
+try {
+    const stored = sessionStorage.getItem(VISITED_STORAGE_KEY);
+    if (stored) {
+        visitedShops = new Set(JSON.parse(stored));
+    }
+} catch (e) {
+    console.error('Failed to load visited shops from sessionStorage', e);
+}
+
+function toggleVisitStatus(rowId) {
+    if (visitedShops.has(rowId)) {
+        visitedShops.delete(rowId);
+    } else {
+        visitedShops.add(rowId);
+    }
+    try {
+        sessionStorage.setItem(VISITED_STORAGE_KEY, JSON.stringify(Array.from(visitedShops)));
+    } catch (e) {
+        console.error('Failed to save visited shops to sessionStorage', e);
+    }
+}
 
 // Variables for auto-update feature
 let autoUpdateInterval = null;
@@ -11,7 +36,7 @@ const AUTO_UPDATE_INTERVAL_MS = 30000; // Reduced to 30 seconds (from 60) for mo
 let lastDataChecksum = ''; // Used to determine if data has changed
 
 // DOM Elements
-const giveawaysTable = document.getElementById('giveaways-table');
+const ShopsTable = document.getElementById('shops-table');
 const noResultsElement = document.getElementById('no-results');
 const loadingContainer = document.querySelector('.loading-container');
 const searchInput = document.getElementById('searchInput');
@@ -438,31 +463,14 @@ function processPublishedJSONP(data) {
         // Extract key fields for more inclusive filtering - accept ANY content
         const result = {
             rowNumber: spreadsheetRowNumber, // Store the exact spreadsheet row number
-            winner: getValueFromCell(row.c[0]),
-            twitch: getValueFromCell(row.c[1]),
-            discord: getValueFromCell(row.c[2]),
-            website: getValueFromCell(row.c[3]),
-            giveaway: getValueFromCell(row.c[4]),
-            discount: getValueFromCell(row.c[5]),
-            shipsFrom: getValueFromCell(row.c[6]),
-            shipping: getValueFromCell(row.c[7]),
-            pictureUrl: getValueFromCell(row.c[8])
+            twitch: getValueFromCell(row.c[0]),
+            discord: getValueFromCell(row.c[1]),
+            website: getValueFromCell(row.c[2]),
+            goodsType: getValueFromCell(row.c[3]),
+            discount: getValueFromCell(row.c[4]),
+            country: getValueFromCell(row.c[5])
         };
         
-        // Track occurrences of keywords for debugging
-        for (const [key, value] of Object.entries(result)) {
-            if (typeof value === 'string') {
-                const lowerValue = value.toLowerCase();
-                // Track occurrences of specific keywords
-                const keywordsToTrack = ['techjeeper', 'boosted', 'spark'];
-                keywordsToTrack.forEach(keyword => {
-                    if (lowerValue.includes(keyword)) {
-                        keywordCounter[keyword] = (keywordCounter[keyword] || 0) + 1;
-                        console.log(`JSONP: Found "${keyword}" in row ${spreadsheetRowNumber}, field: ${key}, value: ${value}`);
-                    }
-                });
-            }
-        }
         
         // Keep all rows with actual content (don't filter out N/A)
         // Only skip completely empty rows
@@ -515,30 +523,24 @@ function parseCSV(csvText) {
         console.log('Processed CSV Headers:', headers);
         
         // Find indices for our columns of interest
-        const winnerIndex = headers.findIndex(h => h.toLowerCase().includes('winner') && !h.toLowerCase().includes('form'));
         const twitchIndex = headers.findIndex(h => h.toLowerCase().includes('twitch'));
         const discordIndex = headers.findIndex(h => h.toLowerCase().includes('discord'));
         const websiteIndex = headers.findIndex(h => h.toLowerCase().includes('website'));
-        const giveawayIndex = headers.findIndex(h => h.toLowerCase().includes('giveaway') && !h.toLowerCase().includes('pictures'));
+        const goodsTypeIndex = headers.findIndex(h => h.toLowerCase().includes('type of goods'));
         const discountIndex = headers.findIndex(h => h.toLowerCase().includes('discount'));
-        const shipsFromIndex = headers.findIndex(h => h.toLowerCase().includes('ships from') || h.toLowerCase().includes('where item ships from'));
-        const shippingIndex = headers.findIndex(h => h.toLowerCase().includes('shipping') && !h.toLowerCase().includes('ships from'));
-        const picturesIndex = headers.findIndex(h => h.toLowerCase().includes('giveaway pictures'));
+        const countryIndex = headers.findIndex(h => h.toLowerCase().includes('country'));
         
         console.log('CSV column indices:', {
-            winnerIndex,
             twitchIndex,
             discordIndex,
             websiteIndex,
-            giveawayIndex,
+            goodsTypeIndex,
             discountIndex,
-            shipsFromIndex,
-            shippingIndex,
-            picturesIndex
+            countryIndex
         });
         
-        if (winnerIndex === -1 || giveawayIndex === -1) {
-            console.error('Required columns "Winner" or "Giveaway" not found in CSV');
+        if (discordIndex === -1 && twitchIndex === -1) {
+            console.error('Required columns "Discord Name" or "Twitch Name" not found in CSV');
         }
         
         // Estimate rows for progress updates
@@ -576,34 +578,14 @@ function parseCSV(csvText) {
                 // Extract key fields for more inclusive filtering - accept ANY content
                 const rowData = {
                     rowNumber: spreadsheetRowNumber, // Store the exact spreadsheet row number
-                    winner: sanitizeField(winnerIndex >= 0 && winnerIndex < row.length ? row[winnerIndex] : null),
                     twitch: sanitizeField(twitchIndex >= 0 && twitchIndex < row.length ? row[twitchIndex] : null),
                     discord: sanitizeField(discordIndex >= 0 && discordIndex < row.length ? row[discordIndex] : null),
                     website: sanitizeField(websiteIndex >= 0 && websiteIndex < row.length ? row[websiteIndex] : null),
-                    giveaway: sanitizeField(giveawayIndex >= 0 && giveawayIndex < row.length ? row[giveawayIndex] : null),
+                    goodsType: sanitizeField(goodsTypeIndex >= 0 && goodsTypeIndex < row.length ? row[goodsTypeIndex] : null),
                     discount: sanitizeField(discountIndex >= 0 && discountIndex < row.length ? row[discountIndex] : null),
-                    shipsFrom: sanitizeField(shipsFromIndex >= 0 && shipsFromIndex < row.length ? row[shipsFromIndex] : null), 
-                    shipping: sanitizeField(shippingIndex >= 0 && shippingIndex < row.length ? row[shippingIndex] : null),
-                    pictureUrl: sanitizeField(picturesIndex >= 0 && picturesIndex < row.length ? row[picturesIndex] : null, '')
+                    country: sanitizeField(countryIndex >= 0 && countryIndex < row.length ? row[countryIndex] : null)
                 };
                 
-                // Only track keywords for the first few rows to avoid excessive logging
-                if (i < 50) {
-                    // Track occurrences of keywords for debugging
-                    for (const [key, value] of Object.entries(rowData)) {
-                        if (typeof value === 'string') {
-                            const lowerValue = value.toLowerCase();
-                            // Track occurrences of specific keywords
-                            const keywordsToTrack = ['techjeeper', 'boosted', 'spark'];
-                            keywordsToTrack.forEach(keyword => {
-                                if (lowerValue.includes(keyword)) {
-                                    keywordCounter[keyword] = (keywordCounter[keyword] || 0) + 1;
-                                    console.log(`CSV: Found "${keyword}" in row ${spreadsheetRowNumber}, field: ${key}, value: ${value}`);
-                                }
-                            });
-                        }
-                    }
-                }
                 
                 // Keep all rows with actual content (don't filter out N/A)
                 // Only skip completely empty rows
@@ -785,8 +767,8 @@ function setTableLoading(isLoading, isInitialLoad = false) {
     }
 }
 
-// Display giveaways in a table format
-function displayGiveaways(giveaways) {
+// Display Shops in a table format
+function displayShops(Shops) {
     // For initial load (during app initialization), we want to proceed differently
     // Use a flag to determine if this is the first display after app startup
     const isFirstLoad = !window.hasDisplayedData;
@@ -795,109 +777,83 @@ function displayGiveaways(giveaways) {
     setTableLoading(true, isFirstLoad);
     
     // Clear the current table rows
-    const tableBody = giveawaysTable.querySelector('tbody');
+    const tableBody = ShopsTable.querySelector('tbody');
     tableBody.innerHTML = '';
     
-    if (giveaways.length === 0) {
+    if (Shops.length === 0) {
         // Show no results message and hide the table
-        giveawaysTable.style.display = 'none';
+        ShopsTable.style.display = 'none';
         noResultsElement.style.display = 'block';
         setTableLoading(false);
         return;
     }
     
     // Hide no results message and show the table
-    giveawaysTable.style.display = 'table';
+    ShopsTable.style.display = 'table';
     noResultsElement.style.display = 'none';
     
-    console.log(`Displaying ${giveaways.length} giveaways in table format`);
+    console.log(`Displaying ${Shops.length} Shops in table format`);
     
-    // Sort giveaways by rowNumber to ensure they appear in sheet order
-    giveaways.sort((a, b) => {
+    // Sort Shops by rowNumber to ensure they appear in sheet order
+    Shops.sort((a, b) => {
         // If rowNumber is missing, use a very high number to sort them to the end
         const aRow = a.rowNumber || 9999;
         const bRow = b.rowNumber || 9999;
         return aRow - bRow;
     });
     
-    // Keep track of the first available row
-    let firstAvailableRow = null;
-    let firstAvailableRowIndex = -1;
     
-    // Add each giveaway as a row in the table
-    giveaways.forEach((giveaway, index) => {
+    // Add each Shop as a row in the table
+    Shops.forEach((Shop, index) => {
         const row = document.createElement('tr');
-        
-        // Normalize winner field for consistent checking (handle capitalization, whitespace)
-        const normalizedWinner = giveaway.winner ? giveaway.winner.trim().toUpperCase() : '';
-        
-        // Check if this is an available giveaway:
-        // 1. Winner must be "N/A" or empty
-        // 2. Giveaway must have a meaningful value (not blank/N/A)
-        const hasWinner = normalizedWinner && normalizedWinner !== 'N/A';
-        const hasGiveaway = giveaway.giveaway && 
-                           giveaway.giveaway.trim().toUpperCase() !== 'N/A' && 
-                           giveaway.giveaway.trim() !== '';
-        
-        const isAvailable = !hasWinner && hasGiveaway;
-        
-        if (index < 10) {
-            console.log(`Row ${index+1} (Sheet row ${giveaway.rowNumber || '?'}): ` +
-                        `Available=${isAvailable}, Winner="${giveaway.winner}", ` +
-                        `Giveaway="${giveaway.giveaway}"`);
-        }
-        
-        // Add class for completed giveaways
-        if (!isAvailable) {
-            row.classList.add('completed-giveaway');
-        } else if (firstAvailableRow === null) {
-            // This is the first available giveaway with actual content
-            row.classList.add('first-available');
-            firstAvailableRow = row;
-            firstAvailableRowIndex = index;
-            console.log(`Found first available row at index ${index} (Sheet row ${giveaway.rowNumber}): ` +
-                        `Winner="${giveaway.winner}", Giveaway="${giveaway.giveaway}"`);
-        }
         
         // Row number column - always use the original spreadsheet row number
         const rowNumCell = document.createElement('td');
-        rowNumCell.textContent = giveaway.rowNumber || (index + 1);
+        rowNumCell.textContent = Shop.rowNumber || (index + 1);
         rowNumCell.style.fontWeight = 'bold';
         rowNumCell.style.textAlign = 'center';
         row.appendChild(rowNumCell);
         
-        // Winner column
-        const winnerCell = document.createElement('td');
-        winnerCell.textContent = giveaway.winner;
-        row.appendChild(winnerCell);
+        // Visit column with checkbox
+        const visitCell = document.createElement('td');
+        visitCell.style.textAlign = 'center';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.className = 'visit-checkbox';
+        checkbox.checked = visitedShops.has(Shop.rowNumber);
+        checkbox.addEventListener('change', () => {
+            toggleVisitStatus(Shop.rowNumber);
+        });
+        visitCell.appendChild(checkbox);
+        row.appendChild(visitCell);
         
         // Twitch Name column
         const twitchCell = document.createElement('td');
-        twitchCell.textContent = giveaway.twitch;
+        twitchCell.textContent = Shop.twitch;
         row.appendChild(twitchCell);
         
         // Discord Name column
         const discordCell = document.createElement('td');
-        discordCell.textContent = giveaway.discord;
+        discordCell.textContent = Shop.discord;
         row.appendChild(discordCell);
         
         // Website column - use an icon instead of the full URL
         const websiteCell = document.createElement('td');
-        if (giveaway.website && giveaway.website !== 'N/A') {
+        if (Shop.website && Shop.website !== 'N/A') {
             const link = document.createElement('a');
-            link.title = giveaway.website; // Show the URL in a tooltip
+            link.title = Shop.website; // Show the URL in a tooltip
             link.className = 'website-icon';
             
             // Check if website field contains multiple URLs
-            const hasMultipleUrls = containsMultipleUrls(giveaway.website);
+            const hasMultipleUrls = containsMultipleUrls(Shop.website);
             
             if (hasMultipleUrls) {
                 // Set up click handler for multiple URLs
                 link.href = 'javascript:void(0)'; // Prevent default navigation
                 link.addEventListener('click', (event) => {
                     event.preventDefault();
-                    const urls = extractUrls(giveaway.website);
-                    showWebsiteLinksModal(urls, `${giveaway.twitch}'s Links`);
+                    const urls = extractUrls(Shop.website);
+                    showWebsiteLinksModal(urls, `${Shop.twitch}'s Links`);
                 });
                 
                 // Use a different icon to indicate multiple links
@@ -927,7 +883,7 @@ function displayGiveaways(giveaways) {
                 link.appendChild(iconWrapper);
             } else {
                 // Single URL - normal behavior
-                link.href = giveaway.website.startsWith('http') ? giveaway.website : `https://${giveaway.website}`;
+                link.href = Shop.website.startsWith('http') ? Shop.website : `https://${Shop.website}`;
                 link.target = '_blank';
                 
                 // Use Font Awesome icon
@@ -942,39 +898,20 @@ function displayGiveaways(giveaways) {
         }
         row.appendChild(websiteCell);
         
-        // Giveaway column
-        const giveawayCell = document.createElement('td');
-        giveawayCell.textContent = giveaway.giveaway;
-        row.appendChild(giveawayCell);
+        // Type of Goods column
+        const goodsCell = document.createElement('td');
+        goodsCell.textContent = Shop.goodsType;
+        row.appendChild(goodsCell);
         
         // Discount column
         const discountCell = document.createElement('td');
-        discountCell.textContent = giveaway.discount || 'None';
+        discountCell.textContent = Shop.discount || 'None';
         row.appendChild(discountCell);
         
-        // Ships From column
-        const shipsFromCell = document.createElement('td');
-        shipsFromCell.textContent = giveaway.shipsFrom;
-        row.appendChild(shipsFromCell);
-        
-        // Shipping column
-        const shippingCell = document.createElement('td');
-        shippingCell.textContent = giveaway.shipping;
-        row.appendChild(shippingCell);
-        
-        // Pictures column - only show if there's a picture URL
-        const picturesCell = document.createElement('td');
-        if (giveaway.pictureUrl && giveaway.pictureUrl.trim() !== '') {
-            const link = document.createElement('a');
-            link.href = giveaway.pictureUrl;
-            link.textContent = 'View';
-            link.className = 'discord-link';
-            link.target = '_blank';
-            picturesCell.appendChild(link);
-        } else {
-            picturesCell.textContent = '';
-        }
-        row.appendChild(picturesCell);
+        // Country column
+        const countryCell = document.createElement('td');
+        countryCell.textContent = Shop.country;
+        row.appendChild(countryCell);
         
         // Add the complete row to the table
         tableBody.appendChild(row);
@@ -985,37 +922,8 @@ function displayGiveaways(giveaways) {
     if (isFirstLoad) {
         // On first load, we immediately remove the table loading spinner to avoid double spinners
         setTableLoading(false);
-        
-        // Scroll to the first available row if there is one, after a delay
-        if (firstAvailableRow) {
-            console.log(`First load: Scrolling to first available row at index ${firstAvailableRowIndex}`);
-            setTimeout(() => {
-                firstAvailableRow.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'center'
-                });
-            }, 500);
-        } else {
-            console.log('No available row found to scroll to');
-        }
     } else {
-        // For subsequent loads (search/filter), use the original timing
-        if (firstAvailableRow) {
-            console.log(`Subsequent load: Scrolling to first available row at index ${firstAvailableRowIndex}`);
-            // Use a small delay to ensure the table is fully rendered
-            setTimeout(() => {
-                firstAvailableRow.scrollIntoView({ 
-                    behavior: 'smooth', 
-                    block: 'center' 
-                });
-                // Remove loading state after scrolling completes
-                setTimeout(() => setTableLoading(false), 300);
-            }, 500);
-        } else {
-            console.log('No available row found to scroll to');
-            // Remove loading state with a small delay for visual feedback
-            setTimeout(() => setTableLoading(false), 300);
-        }
+        setTimeout(() => setTableLoading(false), 300);
     }
 }
 
@@ -1032,11 +940,11 @@ function showError(message) {
     loadingContainer.appendChild(errorElement);
 }
 
-// Filter giveaways based on search term
-function filterGiveaways(giveaways, searchTerm) {
+// Filter Shops based on search term
+function filterShops(Shops, searchTerm) {
     if (!searchTerm || searchTerm.trim() === '') {
-        console.log('Search cleared, showing all rows:', giveaways.length);
-        return giveaways;
+        console.log('Search cleared, showing all rows:', Shops.length);
+        return Shops;
     }
     
     searchTerm = searchTerm.toLowerCase();
@@ -1045,34 +953,26 @@ function filterGiveaways(giveaways, searchTerm) {
     // For debugging: find all occurrences of the search term across all rows and fields
     if (searchTerm === 'techjeeper' || searchTerm === 'boosted' || searchTerm === 'spark') {
         console.log(`DEBUG: Searching for all "${searchTerm}" instances:`);
-        giveaways.forEach((giveaway, idx) => {
-            for (const [key, value] of Object.entries(giveaway)) {
+        Shops.forEach((Shop, idx) => {
+            for (const [key, value] of Object.entries(Shop)) {
                 if (typeof value === 'string' && value.toLowerCase().includes(searchTerm)) {
-                    console.log(`Row ${giveaway.rowNumber}: Found in ${key} = "${value}"`);
+                    console.log(`Row ${Shop.rowNumber}: Found in ${key} = "${value}"`);
                 }
             }
         });
     }
     
-    const filtered = giveaways.filter(giveaway => {
+    const filtered = Shops.filter(Shop => {
         // Check all fields including row number
         const isMatch = 
-            (giveaway.rowNumber && giveaway.rowNumber.toString().includes(searchTerm)) ||
-            (giveaway.winner && giveaway.winner.toLowerCase().includes(searchTerm)) ||
-            (giveaway.twitch && giveaway.twitch.toLowerCase().includes(searchTerm)) ||
-            (giveaway.discord && giveaway.discord.toLowerCase().includes(searchTerm)) ||
-            (giveaway.website && giveaway.website.toLowerCase().includes(searchTerm)) ||
-            (giveaway.giveaway && giveaway.giveaway.toLowerCase().includes(searchTerm)) ||
-            (giveaway.discount && giveaway.discount.toLowerCase().includes(searchTerm)) ||
-            (giveaway.shipsFrom && giveaway.shipsFrom.toLowerCase().includes(searchTerm)) ||
-            (giveaway.shipping && giveaway.shipping.toLowerCase().includes(searchTerm)) ||
-            (giveaway.pictureUrl && giveaway.pictureUrl.toLowerCase().includes(searchTerm));
-        
-        // For specific search terms of interest, log matches
-        if ((searchTerm === 'techjeeper' || searchTerm === 'boosted' || searchTerm === 'spark') && isMatch) {
-            console.log(`Search Match - Row ${giveaway.rowNumber}: Winner="${giveaway.winner}", Giveaway="${giveaway.giveaway}"`);
-        }
-        
+            (Shop.rowNumber && Shop.rowNumber.toString().includes(searchTerm)) ||
+            (Shop.twitch && Shop.twitch.toLowerCase().includes(searchTerm)) ||
+            (Shop.discord && Shop.discord.toLowerCase().includes(searchTerm)) ||
+            (Shop.website && Shop.website.toLowerCase().includes(searchTerm)) ||
+            (Shop.goodsType && Shop.goodsType.toLowerCase().includes(searchTerm)) ||
+            (Shop.discount && Shop.discount.toLowerCase().includes(searchTerm)) ||
+            (Shop.country && Shop.country.toLowerCase().includes(searchTerm));
+
         return isMatch;
     });
     
@@ -1100,51 +1000,36 @@ async function initApp() {
         
         // Get data with progress updates
         const startTime = performance.now();
-        let giveaways = await fetchSheetData();
+        let Shops = await fetchSheetData();
         const loadTime = ((performance.now() - startTime) / 1000).toFixed(1);
-        console.log(`Fetched ${giveaways.length} giveaways from the sheet in ${loadTime} seconds`);
+        console.log(`Fetched ${Shops.length} Shops from the sheet in ${loadTime} seconds`);
         
         // Calculate initial checksum for auto-update feature
-        lastDataChecksum = calculateDataChecksum(giveaways);
+        lastDataChecksum = calculateDataChecksum(Shops);
         console.log('Initial data checksum calculated:', lastDataChecksum);
         
         // Store original data in a global variable to ensure we always have the full dataset
-        window.allGiveaways = [...giveaways];
+        window.allShops = [...Shops];
         
         // Print some diagnostics about row numbers
-        if (giveaways.length > 0) {
+        if (Shops.length > 0) {
             console.log('Row number diagnostics:');
             
             // Print row info for some rows
-            const rowsToPrint = giveaways.filter((giveaway, index) => {
-                // Print first 5 rows, rows with interesting content, and any row near 201
-                return index < 5 || 
-                       (giveaway.winner === 'N/A' && index < 15) || 
-                       (giveaway.rowNumber >= 198 && giveaway.rowNumber <= 208);
+            const rowsToPrint = Shops.filter((Shop, index) => {
+                return index < 5;
             });
             
-            rowsToPrint.forEach((giveaway) => {
-                console.log(`Sheet row ${giveaway.rowNumber}: Winner="${giveaway.winner}", Giveaway="${giveaway.giveaway}"`);
+            rowsToPrint.forEach((Shop) => {
+                console.log(`Sheet row ${Shop.rowNumber}: Twitch="${Shop.twitch}", Discord="${Shop.discord}"`);
             });
-            
-            // Find first available row
-            const firstAvailable = giveaways.find(g => 
-                (g.winner === 'N/A' || !g.winner) && 
-                g.giveaway && g.giveaway !== 'N/A');
-                
-            if (firstAvailable) {
-                console.log('First available row found:');
-                console.log(`Sheet row: ${firstAvailable.rowNumber}, Winner: ${firstAvailable.winner}, Giveaway: ${firstAvailable.giveaway}`);
-            } else {
-                console.log('No available rows found');
-            }
         }
         
-        // Hide loading indicator before displaying giveaways
+        // Hide loading indicator before displaying Shops
         loadingContainer.style.display = 'none';
         
-        // Display giveaways initially
-        displayGiveaways(giveaways);
+        // Display Shops initially
+        displayShops(Shops);
         
         // Add a clear button for the search field for better UX
         const searchContainer = searchInput.parentElement;
@@ -1175,19 +1060,19 @@ async function initApp() {
             }
             
             // IMPORTANT: Always use the complete original dataset
-            let dataset = window.allGiveaways;
+            let dataset = window.allShops;
             console.log(`Using complete dataset with ${dataset.length} rows`);
             
             // If search is empty, show all results
             if (searchValue === '') {
                 console.log(`Search is empty, showing all ${dataset.length} results`);
-                displayGiveaways(dataset);
+                displayShops(dataset);
                 return;
             }
             
             // Otherwise filter the results
-            const filteredGiveaways = filterGiveaways(dataset, searchValue);
-            displayGiveaways(filteredGiveaways);
+            const filteredShops = filterShops(dataset, searchValue);
+            displayShops(filteredShops);
         }
         
         // Initialize clear button visibility
@@ -1211,6 +1096,53 @@ async function initApp() {
             }
         });
         
+        // Handle Export button
+        const exportBtn = document.getElementById('exportBtn');
+        if (exportBtn) {
+            exportBtn.addEventListener('click', () => {
+                if (visitedShops.size === 0) {
+                    alert('No shops selected. Please check some shops to visit first.');
+                    return;
+                }
+
+                const itemsToExport = [];
+                itemsToExport.push(['Shop Name', 'Website']);
+
+                // Match visited shops with global data to get names and URLs
+                window.allShops.forEach(Shop => {
+                    if (visitedShops.has(Shop.rowNumber)) {
+                        const shopName = Shop.discord && Shop.discord !== 'N/A' ? Shop.discord :
+                                        (Shop.twitch && Shop.twitch !== 'N/A' ? Shop.twitch : 'Unknown Shop');
+                        const website = Shop.website && Shop.website !== 'N/A' ? Shop.website : 'No website';
+
+                        // Handle formatting for CSV
+                        const safeName = shopName.includes(',') ? `"${shopName}"` : shopName;
+                        const safeWebsite = website.includes(',') ? `"${website}"` : website;
+                        itemsToExport.push([safeName, safeWebsite]);
+                    }
+                });
+
+                if (itemsToExport.length <= 1) {
+                    alert('Error compiling export list.');
+                    return;
+                }
+
+                // Generate CSV content
+                const csvContent = itemsToExport.map(e => e.join(",")).join("\n");
+
+                // Trigger download
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement("a");
+                link.setAttribute("href", url);
+                link.setAttribute("download", "MoCo_Shopping_List_2026.csv");
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            });
+        }
+
         // Add a refresh button to force reload all data
         const refreshButton = document.createElement('button');
         refreshButton.innerHTML = '<i class="fas fa-sync-alt"></i>';
@@ -1274,11 +1206,11 @@ async function initApp() {
                 lastDataChecksum = calculateDataChecksum(freshData);
                 
                 // Update the global dataset and display
-                window.allGiveaways = [...freshData];
+                window.allShops = [...freshData];
                 console.log(`Refreshed data: ${freshData.length} rows loaded`);
                 
                 // Display all rows
-                displayGiveaways(freshData);
+                displayShops(freshData);
                 
                 // Reset button state
                 refreshButton.innerHTML = '<i class="fas fa-sync-alt"></i>';
@@ -1363,7 +1295,7 @@ function calculateDataChecksum(data) {
     
     for (let i = 0; i < sampleSize; i++) {
         const row = data[i];
-        checksumString += `${row.winner}|${row.giveaway}|${row.twitch}|${row.discord}|`;
+        checksumString += `${row.twitch}|${row.discord}|${row.goodsType}|`;
     }
     
     // Add some rows from the end too (to detect changes at the end of the sheet)
@@ -1371,7 +1303,7 @@ function calculateDataChecksum(data) {
         const endSampleSize = Math.min(5, data.length - sampleSize);
         for (let i = data.length - endSampleSize; i < data.length; i++) {
             const row = data[i];
-            checksumString += `end:${row.winner}|${row.giveaway}|`;
+            checksumString += `end:${row.twitch}|${row.discord}|`;
         }
     }
     
@@ -1429,14 +1361,14 @@ function startAutoUpdate() {
                 setTableLoading(true);
                 
                 // Update the global dataset and display
-                window.allGiveaways = [...freshData];
+                window.allShops = [...freshData];
                 
                 // Display all rows (or filtered if search is active)
                 const searchValue = searchInput.value.trim();
                 if (searchValue === '') {
-                    displayGiveaways(freshData);
+                    displayShops(freshData);
                 } else {
-                    displayGiveaways(filterGiveaways(freshData, searchValue));
+                    displayShops(filterShops(freshData, searchValue));
                 }
                 
                 // Flash the refresh button to indicate auto-update happened
