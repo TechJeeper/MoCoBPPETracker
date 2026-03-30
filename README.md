@@ -1,6 +1,6 @@
-# BPPE 2025 Giveaways Showcase
+# BPPE 2026 Giveaways Showcase
 
-A web interface that displays data from a Google Sheet, showing giveaway information for the BPPE 2025 event in a visually pleasing format.
+A web interface that displays data from a Google Sheet, showing giveaway information for the BPPE 2026 event in a visually pleasing format.
 
 ## Features
 

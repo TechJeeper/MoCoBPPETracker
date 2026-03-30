@@ -1,9 +1,34 @@
 // Constants - Default sheet ID with URL parameter override capability
-const DEFAULT_SHEET_ID = '1pM8fMy2IVe_Sj1mBieFpMxO_to0Z6GDcirbUUZwCT9E';
+const DEFAULT_SHEET_ID = '1TOxnFwsMiDwZ5T-yClsEVQui7KbDj_r-UKD977OkczE';
 // Check if a sheet ID was passed in the URL (e.g., ?sheet=XXXXX)
 const urlParams = new URLSearchParams(window.location.search);
 const SHEET_ID = urlParams.get('sheet') || DEFAULT_SHEET_ID;
 const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit?gid=0#gid=0`;
+
+// Visited shops tracking (using rowNumber as unique ID)
+const VISITED_STORAGE_KEY = 'moco_bppe_visited_shops';
+let visitedShops = new Set();
+try {
+    const stored = sessionStorage.getItem(VISITED_STORAGE_KEY);
+    if (stored) {
+        visitedShops = new Set(JSON.parse(stored));
+    }
+} catch (e) {
+    console.error('Failed to load visited shops from sessionStorage', e);
+}
+
+function toggleVisitStatus(rowId) {
+    if (visitedShops.has(rowId)) {
+        visitedShops.delete(rowId);
+    } else {
+        visitedShops.add(rowId);
+    }
+    try {
+        sessionStorage.setItem(VISITED_STORAGE_KEY, JSON.stringify(Array.from(visitedShops)));
+    } catch (e) {
+        console.error('Failed to save visited shops to sessionStorage', e);
+    }
+}
 
 // Variables for auto-update feature
 let autoUpdateInterval = null;
@@ -438,31 +463,14 @@ function processPublishedJSONP(data) {
         // Extract key fields for more inclusive filtering - accept ANY content
         const result = {
             rowNumber: spreadsheetRowNumber, // Store the exact spreadsheet row number
-            winner: getValueFromCell(row.c[0]),
-            twitch: getValueFromCell(row.c[1]),
-            discord: getValueFromCell(row.c[2]),
-            website: getValueFromCell(row.c[3]),
-            giveaway: getValueFromCell(row.c[4]),
-            discount: getValueFromCell(row.c[5]),
-            shipsFrom: getValueFromCell(row.c[6]),
-            shipping: getValueFromCell(row.c[7]),
-            pictureUrl: getValueFromCell(row.c[8])
+            twitch: getValueFromCell(row.c[0]),
+            discord: getValueFromCell(row.c[1]),
+            website: getValueFromCell(row.c[2]),
+            goodsType: getValueFromCell(row.c[3]),
+            discount: getValueFromCell(row.c[4]),
+            country: getValueFromCell(row.c[5])
         };
         
-        // Track occurrences of keywords for debugging
-        for (const [key, value] of Object.entries(result)) {
-            if (typeof value === 'string') {
-                const lowerValue = value.toLowerCase();
-                // Track occurrences of specific keywords
-                const keywordsToTrack = ['techjeeper', 'boosted', 'spark'];
-                keywordsToTrack.forEach(keyword => {
-                    if (lowerValue.includes(keyword)) {
-                        keywordCounter[keyword] = (keywordCounter[keyword] || 0) + 1;
-                        console.log(`JSONP: Found "${keyword}" in row ${spreadsheetRowNumber}, field: ${key}, value: ${value}`);
-                    }
-                });
-            }
-        }
         
         // Keep all rows with actual content (don't filter out N/A)
         // Only skip completely empty rows
@@ -515,30 +523,24 @@ function parseCSV(csvText) {
         console.log('Processed CSV Headers:', headers);
         
         // Find indices for our columns of interest
-        const winnerIndex = headers.findIndex(h => h.toLowerCase().includes('winner') && !h.toLowerCase().includes('form'));
         const twitchIndex = headers.findIndex(h => h.toLowerCase().includes('twitch'));
         const discordIndex = headers.findIndex(h => h.toLowerCase().includes('discord'));
         const websiteIndex = headers.findIndex(h => h.toLowerCase().includes('website'));
-        const giveawayIndex = headers.findIndex(h => h.toLowerCase().includes('giveaway') && !h.toLowerCase().includes('pictures'));
+        const goodsTypeIndex = headers.findIndex(h => h.toLowerCase().includes('type of goods'));
         const discountIndex = headers.findIndex(h => h.toLowerCase().includes('discount'));
-        const shipsFromIndex = headers.findIndex(h => h.toLowerCase().includes('ships from') || h.toLowerCase().includes('where item ships from'));
-        const shippingIndex = headers.findIndex(h => h.toLowerCase().includes('shipping') && !h.toLowerCase().includes('ships from'));
-        const picturesIndex = headers.findIndex(h => h.toLowerCase().includes('giveaway pictures'));
+        const countryIndex = headers.findIndex(h => h.toLowerCase().includes('country'));
         
         console.log('CSV column indices:', {
-            winnerIndex,
             twitchIndex,
             discordIndex,
             websiteIndex,
-            giveawayIndex,
+            goodsTypeIndex,
             discountIndex,
-            shipsFromIndex,
-            shippingIndex,
-            picturesIndex
+            countryIndex
         });
         
-        if (winnerIndex === -1 || giveawayIndex === -1) {
-            console.error('Required columns "Winner" or "Giveaway" not found in CSV');
+        if (discordIndex === -1 && twitchIndex === -1) {
+            console.error('Required columns "Discord Name" or "Twitch Name" not found in CSV');
         }
         
         // Estimate rows for progress updates
@@ -576,34 +578,14 @@ function parseCSV(csvText) {
                 // Extract key fields for more inclusive filtering - accept ANY content
                 const rowData = {
                     rowNumber: spreadsheetRowNumber, // Store the exact spreadsheet row number
-                    winner: sanitizeField(winnerIndex >= 0 && winnerIndex < row.length ? row[winnerIndex] : null),
                     twitch: sanitizeField(twitchIndex >= 0 && twitchIndex < row.length ? row[twitchIndex] : null),
                     discord: sanitizeField(discordIndex >= 0 && discordIndex < row.length ? row[discordIndex] : null),
                     website: sanitizeField(websiteIndex >= 0 && websiteIndex < row.length ? row[websiteIndex] : null),
-                    giveaway: sanitizeField(giveawayIndex >= 0 && giveawayIndex < row.length ? row[giveawayIndex] : null),
+                    goodsType: sanitizeField(goodsTypeIndex >= 0 && goodsTypeIndex < row.length ? row[goodsTypeIndex] : null),
                     discount: sanitizeField(discountIndex >= 0 && discountIndex < row.length ? row[discountIndex] : null),
-                    shipsFrom: sanitizeField(shipsFromIndex >= 0 && shipsFromIndex < row.length ? row[shipsFromIndex] : null), 
-                    shipping: sanitizeField(shippingIndex >= 0 && shippingIndex < row.length ? row[shippingIndex] : null),
-                    pictureUrl: sanitizeField(picturesIndex >= 0 && picturesIndex < row.length ? row[picturesIndex] : null, '')
+                    country: sanitizeField(countryIndex >= 0 && countryIndex < row.length ? row[countryIndex] : null)
                 };
                 
-                // Only track keywords for the first few rows to avoid excessive logging
-                if (i < 50) {
-                    // Track occurrences of keywords for debugging
-                    for (const [key, value] of Object.entries(rowData)) {
-                        if (typeof value === 'string') {
-                            const lowerValue = value.toLowerCase();
-                            // Track occurrences of specific keywords
-                            const keywordsToTrack = ['techjeeper', 'boosted', 'spark'];
-                            keywordsToTrack.forEach(keyword => {
-                                if (lowerValue.includes(keyword)) {
-                                    keywordCounter[keyword] = (keywordCounter[keyword] || 0) + 1;
-                                    console.log(`CSV: Found "${keyword}" in row ${spreadsheetRowNumber}, field: ${key}, value: ${value}`);
-                                }
-                            });
-                        }
-                    }
-                }
                 
                 // Keep all rows with actual content (don't filter out N/A)
                 // Only skip completely empty rows
@@ -820,44 +802,10 @@ function displayGiveaways(giveaways) {
         return aRow - bRow;
     });
     
-    // Keep track of the first available row
-    let firstAvailableRow = null;
-    let firstAvailableRowIndex = -1;
     
     // Add each giveaway as a row in the table
     giveaways.forEach((giveaway, index) => {
         const row = document.createElement('tr');
-        
-        // Normalize winner field for consistent checking (handle capitalization, whitespace)
-        const normalizedWinner = giveaway.winner ? giveaway.winner.trim().toUpperCase() : '';
-        
-        // Check if this is an available giveaway:
-        // 1. Winner must be "N/A" or empty
-        // 2. Giveaway must have a meaningful value (not blank/N/A)
-        const hasWinner = normalizedWinner && normalizedWinner !== 'N/A';
-        const hasGiveaway = giveaway.giveaway && 
-                           giveaway.giveaway.trim().toUpperCase() !== 'N/A' && 
-                           giveaway.giveaway.trim() !== '';
-        
-        const isAvailable = !hasWinner && hasGiveaway;
-        
-        if (index < 10) {
-            console.log(`Row ${index+1} (Sheet row ${giveaway.rowNumber || '?'}): ` +
-                        `Available=${isAvailable}, Winner="${giveaway.winner}", ` +
-                        `Giveaway="${giveaway.giveaway}"`);
-        }
-        
-        // Add class for completed giveaways
-        if (!isAvailable) {
-            row.classList.add('completed-giveaway');
-        } else if (firstAvailableRow === null) {
-            // This is the first available giveaway with actual content
-            row.classList.add('first-available');
-            firstAvailableRow = row;
-            firstAvailableRowIndex = index;
-            console.log(`Found first available row at index ${index} (Sheet row ${giveaway.rowNumber}): ` +
-                        `Winner="${giveaway.winner}", Giveaway="${giveaway.giveaway}"`);
-        }
         
         // Row number column - always use the original spreadsheet row number
         const rowNumCell = document.createElement('td');
@@ -866,10 +814,18 @@ function displayGiveaways(giveaways) {
         rowNumCell.style.textAlign = 'center';
         row.appendChild(rowNumCell);
         
-        // Winner column
-        const winnerCell = document.createElement('td');
-        winnerCell.textContent = giveaway.winner;
-        row.appendChild(winnerCell);
+        // Visit column with checkbox
+        const visitCell = document.createElement('td');
+        visitCell.style.textAlign = 'center';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.className = 'visit-checkbox';
+        checkbox.checked = visitedShops.has(giveaway.rowNumber);
+        checkbox.addEventListener('change', () => {
+            toggleVisitStatus(giveaway.rowNumber);
+        });
+        visitCell.appendChild(checkbox);
+        row.appendChild(visitCell);
         
         // Twitch Name column
         const twitchCell = document.createElement('td');
@@ -942,39 +898,20 @@ function displayGiveaways(giveaways) {
         }
         row.appendChild(websiteCell);
         
-        // Giveaway column
-        const giveawayCell = document.createElement('td');
-        giveawayCell.textContent = giveaway.giveaway;
-        row.appendChild(giveawayCell);
+        // Type of Goods column
+        const goodsCell = document.createElement('td');
+        goodsCell.textContent = giveaway.goodsType;
+        row.appendChild(goodsCell);
         
         // Discount column
         const discountCell = document.createElement('td');
         discountCell.textContent = giveaway.discount || 'None';
         row.appendChild(discountCell);
         
-        // Ships From column
-        const shipsFromCell = document.createElement('td');
-        shipsFromCell.textContent = giveaway.shipsFrom;
-        row.appendChild(shipsFromCell);
-        
-        // Shipping column
-        const shippingCell = document.createElement('td');
-        shippingCell.textContent = giveaway.shipping;
-        row.appendChild(shippingCell);
-        
-        // Pictures column - only show if there's a picture URL
-        const picturesCell = document.createElement('td');
-        if (giveaway.pictureUrl && giveaway.pictureUrl.trim() !== '') {
-            const link = document.createElement('a');
-            link.href = giveaway.pictureUrl;
-            link.textContent = 'View';
-            link.className = 'discord-link';
-            link.target = '_blank';
-            picturesCell.appendChild(link);
-        } else {
-            picturesCell.textContent = '';
-        }
-        row.appendChild(picturesCell);
+        // Country column
+        const countryCell = document.createElement('td');
+        countryCell.textContent = giveaway.country;
+        row.appendChild(countryCell);
         
         // Add the complete row to the table
         tableBody.appendChild(row);
@@ -985,37 +922,8 @@ function displayGiveaways(giveaways) {
     if (isFirstLoad) {
         // On first load, we immediately remove the table loading spinner to avoid double spinners
         setTableLoading(false);
-        
-        // Scroll to the first available row if there is one, after a delay
-        if (firstAvailableRow) {
-            console.log(`First load: Scrolling to first available row at index ${firstAvailableRowIndex}`);
-            setTimeout(() => {
-                firstAvailableRow.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'center'
-                });
-            }, 500);
-        } else {
-            console.log('No available row found to scroll to');
-        }
     } else {
-        // For subsequent loads (search/filter), use the original timing
-        if (firstAvailableRow) {
-            console.log(`Subsequent load: Scrolling to first available row at index ${firstAvailableRowIndex}`);
-            // Use a small delay to ensure the table is fully rendered
-            setTimeout(() => {
-                firstAvailableRow.scrollIntoView({ 
-                    behavior: 'smooth', 
-                    block: 'center' 
-                });
-                // Remove loading state after scrolling completes
-                setTimeout(() => setTableLoading(false), 300);
-            }, 500);
-        } else {
-            console.log('No available row found to scroll to');
-            // Remove loading state with a small delay for visual feedback
-            setTimeout(() => setTableLoading(false), 300);
-        }
+        setTimeout(() => setTableLoading(false), 300);
     }
 }
 
@@ -1058,21 +966,13 @@ function filterGiveaways(giveaways, searchTerm) {
         // Check all fields including row number
         const isMatch = 
             (giveaway.rowNumber && giveaway.rowNumber.toString().includes(searchTerm)) ||
-            (giveaway.winner && giveaway.winner.toLowerCase().includes(searchTerm)) ||
             (giveaway.twitch && giveaway.twitch.toLowerCase().includes(searchTerm)) ||
             (giveaway.discord && giveaway.discord.toLowerCase().includes(searchTerm)) ||
             (giveaway.website && giveaway.website.toLowerCase().includes(searchTerm)) ||
-            (giveaway.giveaway && giveaway.giveaway.toLowerCase().includes(searchTerm)) ||
+            (giveaway.goodsType && giveaway.goodsType.toLowerCase().includes(searchTerm)) ||
             (giveaway.discount && giveaway.discount.toLowerCase().includes(searchTerm)) ||
-            (giveaway.shipsFrom && giveaway.shipsFrom.toLowerCase().includes(searchTerm)) ||
-            (giveaway.shipping && giveaway.shipping.toLowerCase().includes(searchTerm)) ||
-            (giveaway.pictureUrl && giveaway.pictureUrl.toLowerCase().includes(searchTerm));
-        
-        // For specific search terms of interest, log matches
-        if ((searchTerm === 'techjeeper' || searchTerm === 'boosted' || searchTerm === 'spark') && isMatch) {
-            console.log(`Search Match - Row ${giveaway.rowNumber}: Winner="${giveaway.winner}", Giveaway="${giveaway.giveaway}"`);
-        }
-        
+            (giveaway.country && giveaway.country.toLowerCase().includes(searchTerm));
+
         return isMatch;
     });
     
@@ -1117,27 +1017,12 @@ async function initApp() {
             
             // Print row info for some rows
             const rowsToPrint = giveaways.filter((giveaway, index) => {
-                // Print first 5 rows, rows with interesting content, and any row near 201
-                return index < 5 || 
-                       (giveaway.winner === 'N/A' && index < 15) || 
-                       (giveaway.rowNumber >= 198 && giveaway.rowNumber <= 208);
+                return index < 5;
             });
             
             rowsToPrint.forEach((giveaway) => {
-                console.log(`Sheet row ${giveaway.rowNumber}: Winner="${giveaway.winner}", Giveaway="${giveaway.giveaway}"`);
+                console.log(`Sheet row ${giveaway.rowNumber}: Twitch="${giveaway.twitch}", Discord="${giveaway.discord}"`);
             });
-            
-            // Find first available row
-            const firstAvailable = giveaways.find(g => 
-                (g.winner === 'N/A' || !g.winner) && 
-                g.giveaway && g.giveaway !== 'N/A');
-                
-            if (firstAvailable) {
-                console.log('First available row found:');
-                console.log(`Sheet row: ${firstAvailable.rowNumber}, Winner: ${firstAvailable.winner}, Giveaway: ${firstAvailable.giveaway}`);
-            } else {
-                console.log('No available rows found');
-            }
         }
         
         // Hide loading indicator before displaying giveaways
@@ -1211,6 +1096,53 @@ async function initApp() {
             }
         });
         
+        // Handle Export button
+        const exportBtn = document.getElementById('exportBtn');
+        if (exportBtn) {
+            exportBtn.addEventListener('click', () => {
+                if (visitedShops.size === 0) {
+                    alert('No shops selected. Please check some shops to visit first.');
+                    return;
+                }
+
+                const itemsToExport = [];
+                itemsToExport.push(['Shop Name', 'Website']);
+
+                // Match visited shops with global data to get names and URLs
+                window.allGiveaways.forEach(giveaway => {
+                    if (visitedShops.has(giveaway.rowNumber)) {
+                        const shopName = giveaway.discord && giveaway.discord !== 'N/A' ? giveaway.discord :
+                                        (giveaway.twitch && giveaway.twitch !== 'N/A' ? giveaway.twitch : 'Unknown Shop');
+                        const website = giveaway.website && giveaway.website !== 'N/A' ? giveaway.website : 'No website';
+
+                        // Handle formatting for CSV
+                        const safeName = shopName.includes(',') ? `"${shopName}"` : shopName;
+                        const safeWebsite = website.includes(',') ? `"${website}"` : website;
+                        itemsToExport.push([safeName, safeWebsite]);
+                    }
+                });
+
+                if (itemsToExport.length <= 1) {
+                    alert('Error compiling export list.');
+                    return;
+                }
+
+                // Generate CSV content
+                const csvContent = itemsToExport.map(e => e.join(",")).join("\n");
+
+                // Trigger download
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement("a");
+                link.setAttribute("href", url);
+                link.setAttribute("download", "MoCo_Shopping_List_2026.csv");
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            });
+        }
+
         // Add a refresh button to force reload all data
         const refreshButton = document.createElement('button');
         refreshButton.innerHTML = '<i class="fas fa-sync-alt"></i>';
@@ -1363,7 +1295,7 @@ function calculateDataChecksum(data) {
     
     for (let i = 0; i < sampleSize; i++) {
         const row = data[i];
-        checksumString += `${row.winner}|${row.giveaway}|${row.twitch}|${row.discord}|`;
+        checksumString += `${row.twitch}|${row.discord}|${row.goodsType}|`;
     }
     
     // Add some rows from the end too (to detect changes at the end of the sheet)
@@ -1371,7 +1303,7 @@ function calculateDataChecksum(data) {
         const endSampleSize = Math.min(5, data.length - sampleSize);
         for (let i = data.length - endSampleSize; i < data.length; i++) {
             const row = data[i];
-            checksumString += `end:${row.winner}|${row.giveaway}|`;
+            checksumString += `end:${row.twitch}|${row.discord}|`;
         }
     }
     
