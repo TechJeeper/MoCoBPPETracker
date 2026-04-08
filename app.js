@@ -392,7 +392,9 @@ function fetchWithJSONP(method = 'csv') {
         window[callbackName] = function(data) {
             // Clean up - delete the callback and remove the script tag
             delete window[callbackName];
-            document.body.removeChild(script);
+            if (script.parentNode) {
+                script.parentNode.removeChild(script);
+            }
             
             // Process the data
             if (method === 'published') {
@@ -418,7 +420,9 @@ function fetchWithJSONP(method = 'csv') {
         script.onerror = function() {
             // Clean up on error
             delete window[callbackName];
-            document.body.removeChild(script);
+            if (script.parentNode) {
+                script.parentNode.removeChild(script);
+            }
             reject(new Error('JSONP request failed'));
         };
         
@@ -429,7 +433,9 @@ function fetchWithJSONP(method = 'csv') {
         setTimeout(() => {
             if (window[callbackName]) {
                 delete window[callbackName];
-                document.body.removeChild(script);
+                if (script.parentNode) {
+                    script.parentNode.removeChild(script);
+                }
                 reject(new Error('JSONP request timed out'));
             }
         }, 5000); // 5 second timeout (reduced from 10 seconds)
